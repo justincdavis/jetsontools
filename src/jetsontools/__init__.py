@@ -5,12 +5,21 @@
 """
 Package for bounding boxes and their operations.
 
+Submodules
+----------
+info
+    Tools for getting information about the Jetson device.
+
+Classes
+-------
+Tegrastats
+    Runs tegrastats in a separate process and stores output in a file.
+
 Functions
 ---------
 set_log_level
     Set the log level for the jetsontools package.
-enable_jit
-    Enable just-in-time compilation using Numba for some functions.
+
 """
 
 from __future__ import annotations
@@ -71,7 +80,7 @@ def set_log_level(level: str) -> None:
     _setup_logger(level)
 
 
-level = os.getenv("jetsontools_LOG_LEVEL")
+level = os.getenv("JETSONTOOLS_LOG_LEVEL")
 _setup_logger(level)
 _log = logging.getLogger(__name__)
 if level is not None and level.upper() not in [
@@ -83,56 +92,12 @@ if level is not None and level.upper() not in [
 ]:
     _log.warning(f"Invalid log level: {level}. Using default log level: WARNING")
 
-
-from dataclasses import dataclass
-
-
-@dataclass
-class _FLAGS:
-    """
-    Class for storing flags for jetsontools.
-
-    Attributes
-    ----------
-    USEJIT : bool
-        Whether or not to use jit.
-    PARALLEL : bool
-        Whether or not to use parallel compilation in the jit.
-
-    """
-
-    USEJIT: bool = False
-    PARALLEL: bool = False
-
-
-_FLAGSOBJ = _FLAGS()
-
-
-def enable_jit(*, on: bool | None = None, parallel: bool | None = None) -> None:
-    """
-    Enable just-in-time compilation using Numba for some functions.
-
-    Parameters
-    ----------
-    on : bool | None
-        If True, enable jit. If False, disable jit. If None, enable jit.
-    parallel : bool | None
-        If True, enable parallel jit. If False, disable parallel jit. If None, disable parallel jit.
-
-
-    """
-    if on is None:
-        on = True
-    if parallel is None:
-        parallel = False
-    _FLAGSOBJ.USEJIT = on
-    _FLAGSOBJ.PARALLEL = parallel
-    _log.info(f"JIT is {'enabled' if on else 'disabled'}; parallel: {parallel}.")
-
+from . import info
+from ._tegrastats import Tegrastats
 
 __all__ = [
-    "_FLAGSOBJ",
-    "enable_jit",
+    "Tegrastats",
+    "info",
     "set_log_level",
 ]
 __version__ = "0.0.1"

@@ -11,7 +11,7 @@ authors = [
 maintainers = [
   {name="Justin Davis", email="davisjustin302@gmail.com"},
 ]
-description = "Extended functionality on top of OpenCV"
+description = "Tools for working with NVIDIA Jetson devices."
 readme = "README.md"
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -24,7 +24,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: Implementation :: CPython",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Natural Language :: English",
     "Intended Audience :: Developers",
@@ -44,9 +43,6 @@ dependencies = [
 "Bug Tracker" = "https://github.com/justincdavis/jetsontools/issues"
 
 [project.optional-dependencies]
-jit = [
-    "numba>=0.55.0",
-]
 ci = [
     "pyupgrade>=3.10",
     "ruff>=0.4.5",
@@ -158,13 +154,6 @@ disallow_incomplete_defs = true
 disallow_untyped_defs = true
 no_implicit_reexport = true
 warn_return_any = true
-plugins = "numpy.typing.mypy_plugin"
-
-[[tool.mypy.overrides]]
-module = [
-    'numba',
-]
-ignore_errors = true
 
 [tool.pyright]
 include = ["src"]
