@@ -91,7 +91,7 @@ def get_info(*, verbose: bool | None = None) -> JetsonInfo:
             " L4T " + output["l4t"] + " [ JetPack " + output["jetpack"] + " ]",
         )
     # Ubuntu version
-    output["ubuntu"] = ""
+    output["ubuntu"] = "UNKNOWN"
     ubuntu_version_path = Path("/etc/os-release")
     if ubuntu_version_path.exists():
         with ubuntu_version_path.open("r") as ubuntu_version_file:
@@ -113,7 +113,7 @@ def get_info(*, verbose: bool | None = None) -> JetsonInfo:
             print("Reason: Unable to find file /etc/os-release")
 
     # Kernel Release
-    output["kernel"] = ""
+    output["kernel"] = "UNKNOWN"
     kernel_release_path = Path("/proc/version")
     if kernel_release_path.exists():
         with kernel_release_path.open("r") as version_file:
