@@ -64,7 +64,9 @@ def get_info(*, verbose: bool | None = None) -> JetsonInfo:
     environment_vars: dict[str, str] = {}
     output: dict[str, str] = {}
 
-    command0 = ["bash", "-c", "source scripts/jetson_variables.sh && env"]
+    path0 = Path(__file__).parent.parent / "_scripts" / "jetson_variables.sh"
+    path0 = path0.resolve()
+    command0 = ["bash", "-c", f"source {path0} && env"]
 
     proc = subprocess.Popen(command0, stdout=subprocess.PIPE)
     if proc.stdout is None:
@@ -129,7 +131,9 @@ def get_info(*, verbose: bool | None = None) -> JetsonInfo:
             )
             print("Reason: Unable to find file /proc/version")
 
-    command1 = ["bash", "-c", "source scripts/jetson_libraries.sh && env"]
+    path1 = Path(__file__).parent.parent / "_scripts" / "jetson_libraries.sh"
+    path1 = path1.resolve()
+    command1 = ["bash", "-c", f"source {path1} && env"]
 
     proc1 = subprocess.Popen(command1, stdout=subprocess.PIPE)
     if proc1.stdout is None:
