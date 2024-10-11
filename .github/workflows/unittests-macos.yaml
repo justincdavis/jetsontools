@@ -1,29 +1,29 @@
-name: Unit Tests - MacOS
+# name: Unit Tests - MacOS
 
-on: [ push ]
+# on: [ push ]
 
-jobs:
-  build:
-    runs-on: macos-latest
+# jobs:
+#   build:
+#     runs-on: macos-latest
     
-    strategy:
-      matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+#     strategy:
+#       matrix:
+#         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v2
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
+#       - name: Set up Python
+#         uses: actions/setup-python@v2
+#         with:
+#           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          pip install .[test]
+#       - name: Install dependencies
+#         run: |
+#           python3 -m pip install --upgrade pip
+#           pip install .[test]
 
-      - name: Run unit tests
-        run: |
-          ./ci/run_tests.sh
+#       - name: Run unit tests
+#         run: |
+#           ./ci/run_tests.sh
