@@ -198,7 +198,6 @@ def get_data(
     """
     raw: dict[str, list[float | int]] = {}
 
-    names = [name for name in raw if "VDD" in name or "VIN" in name]
     for name in names:
         raw[name] = []
 
@@ -214,10 +213,6 @@ def get_data(
         metrics[name] = Metric(raw=raw_data)
 
     return metrics
-
-
-def _parse_energy_value(value: str) -> float:
-    return float(value.split("/")[0][:-2])
 
 
 def get_energy(
@@ -237,10 +232,9 @@ def get_energy(
         The parsed values, each value is the parsed values
 
     """
-    raw: dict[str, list[float]] = {}
 
-    names = [name for name in raw if "VDD" in name or "VIN" in name]
-    for name in names:
-        raw[name] = []
+    def parse_energy_value(value: str) -> float:
+        return float(value.split("/")[0][:-2])
 
-    return get_data(data, names, _parse_energy_value)
+    names = [name for name in data[0] if "VDD" in name or "VIN" in name]
+    return get_data(data, names, parse_energy_value)

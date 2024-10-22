@@ -6,17 +6,17 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join("..", "src")))
-import bboxlib
+import jetsontools
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'bboxlib'
+project = 'jetsontools'
 copyright = '2024, Justin Davis'
 author = 'Justin Davis'
 version = '0.0.2'
 
-assert version == bboxlib.__version__
+assert version == jetsontools.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

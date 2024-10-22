@@ -1,16 +1,18 @@
 # Copyright (c) 2024 Justin Davis (davisjustin302@gmail.com)
 #
 # MIT License
+"""Showcase of basic usage of Tegrastats and parsing output."""
+
 from __future__ import annotations
 
 import time
 from pathlib import Path
 
-from jetsontools import Tegrastats, parse_tegrastats
+from jetsontools import Tegrastats, get_energy, parse_tegrastats
 
 
 def main() -> None:
-    """Example showcasing Tegrastats."""
+    """Showcase basic usage of Tegrastats."""
     example_path = Path(__file__).parent / "output.txt"
 
     interval = 5  # sample every 5 ms
@@ -29,13 +31,18 @@ def main() -> None:
     with example_path.open("r") as f:
         lines = f.readlines()
 
-        print(f"Total of: {len(lines)} entries found, compared to {1000 / interval * duration}.")
+        print(
+            f"Total of: {len(lines)} entries found, compared to {1000 / interval * duration}.",
+        )
         print("Loss is expected.")
 
     # parse the output
     output = parse_tegrastats(example_path)
-    for entry in output:
-        print(entry)
+
+    # parse the energy
+    energy_data = get_energy(output)
+    for mname, metric in energy_data.items():
+        print(f"{mname}: {metric.mean} mW")
 
 
 if __name__ == "__main__":
