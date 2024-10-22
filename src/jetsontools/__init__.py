@@ -98,14 +98,15 @@ if level is not None and level.upper() not in [
 
 from . import info
 from .info import get_info
-from ._tegrastats import Tegrastats, parse_tegrastats
+from ._tegrastats import Tegrastats
+from ._parsing import parse_tegrastats
 
 __all__ = [
     "Tegrastats",
-    "info",
     "get_info",
-    "set_log_level",
+    "info",
     "parse_tegrastats",
+    "set_log_level",
 ]
 __version__ = "0.0.2"
 
