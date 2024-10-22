@@ -49,6 +49,7 @@ class Tegrastats:
         self._interval = interval
         self._readall = readall
 
+        self._event = mp.Event()
         self._process = mp.Process(
             target=self._run,
             args=(self._output, self._interval),
@@ -56,7 +57,12 @@ class Tegrastats:
         )
 
     def __enter__(self: Self) -> Self:
+        # start the process
         self._process.start()
+
+        # need to wait for Flag
+        self._event.wait()
+
         return self
 
     def __exit__(
@@ -121,6 +127,9 @@ class Tegrastats:
 
             _log.debug("No errors from process found")
 
+            # signal that the process is opened
+            self._event.set()
+
             # read output while it exists
             # this will be stopped by the __exit__ call
             # which will call tegrastats --stop
@@ -129,8 +138,7 @@ class Tegrastats:
                 line = process.stdout.readline()
                 if not line:
                     break
-                timestamp = time.time()
-                f.write(f"{timestamp:.6f}:: {line}")
+                f.write(f"{time.time()}::{line}")
                 f.flush()
 
             _log.debug("Stopped reading from tegrastats process")
