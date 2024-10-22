@@ -17,8 +17,12 @@ Tegrastats
 
 Functions
 ---------
+get_info
+    Get information about the Jetson device.
 set_log_level
     Set the log level for the jetsontools package.
+parse_tegrastats
+    Parse a file written by Tegrastats/tegrastats
 
 """
 
@@ -93,12 +97,15 @@ if level is not None and level.upper() not in [
     _log.warning(f"Invalid log level: {level}. Using default log level: WARNING")
 
 from . import info
-from ._tegrastats import Tegrastats
+from .info import get_info
+from ._tegrastats import Tegrastats, parse_tegrastats
 
 __all__ = [
     "Tegrastats",
     "info",
+    "get_info",
     "set_log_level",
+    "parse_tegrastats",
 ]
 __version__ = "0.0.1"
 
