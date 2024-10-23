@@ -14,7 +14,7 @@ import jetsontools
 project = 'jetsontools'
 copyright = '2024, Justin Davis'
 author = 'Justin Davis'
-version = '0.0.2'
+version = '0.0.3'
 
 assert version == jetsontools.__version__
 
