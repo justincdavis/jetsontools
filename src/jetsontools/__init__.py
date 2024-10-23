@@ -21,8 +21,10 @@ get_info
     Get information about the Jetson device.
 get_data
     Parse the output of parse_tegrastats further to get specfic data.
-get_energy
+get_powerdraw
     Parse the output of parse_tegrastats to get all energy information.
+filter_data
+    Filter the Tegrastats output by selections of timestamps.
 set_log_level
     Set the log level for the jetsontools package.
 parse_tegrastats
@@ -103,13 +105,14 @@ if level is not None and level.upper() not in [
 from . import info
 from .info import get_info
 from ._tegrastats import Tegrastats
-from ._parsing import parse_tegrastats, get_data, get_energy
+from ._parsing import parse_tegrastats, get_data, get_powerdraw, filter_data
 
 __all__ = [
     "Tegrastats",
+    "filter_data",
     "get_data",
-    "get_energy",
     "get_info",
+    "get_powerdraw",
     "info",
     "parse_tegrastats",
     "set_log_level",

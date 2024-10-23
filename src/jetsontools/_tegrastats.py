@@ -57,12 +57,7 @@ class Tegrastats:
         )
 
     def __enter__(self: Self) -> Self:
-        # start the process
-        self._process.start()
-
-        # need to wait for Flag
-        self._event.wait()
-
+        self.start()
         return self
 
     def __exit__(
@@ -71,6 +66,18 @@ class Tegrastats:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        self.stop()
+
+    def start(self: Self) -> None:
+        """Start running Tegrastats."""
+        # start the process
+        self._process.start()
+
+        # need to wait for Flag
+        self._event.wait()
+
+    def stop(self: Self) -> None:
+        """Stop running Tegrastats."""
         _log.debug("Stopping tegrastats")
         self._process.terminate()
         command = ["tegrastats", "--stop"]
