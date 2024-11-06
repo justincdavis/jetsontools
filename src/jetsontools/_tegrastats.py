@@ -49,7 +49,7 @@ class Tegrastats:
         self._interval = interval
         self._readall = readall
 
-        self._event = mp.Event()
+        self._start_flag = mp.Event()
         self._process = mp.Process(
             target=self._run,
             args=(self._output, self._interval),
@@ -74,7 +74,7 @@ class Tegrastats:
         self._process.start()
 
         # need to wait for Flag
-        self._event.wait()
+        self._start_flag.wait()
 
     def stop(self: Self) -> None:
         """Stop running Tegrastats."""
@@ -85,6 +85,16 @@ class Tegrastats:
             command,
             check=True,
         )
+
+    def reset(self: Self) -> None:
+        """Reset the Tegrastats process and data file."""
+        self.stop()
+        self._process = mp.Process(
+            target=self._run,
+            args=(self._output, self._interval),
+            daemon=True,
+        )
+        self.start()
 
     def _run(
         self: Self,
@@ -135,7 +145,7 @@ class Tegrastats:
             _log.debug("No errors from process found")
 
             # signal that the process is opened
-            self._event.set()
+            self._start_flag.set()
 
             # read output while it exists
             # this will be stopped by the __exit__ call
