@@ -306,8 +306,18 @@ def get_powerdraw(
 
     # total out all the VDD/VIN data
     new_metrics: list[tuple[str, Metric]] = []
-    for vtype in ["VDD", "VIN"]:
-        vdata = [edata.raw for ename, edata in power_data.items() if vtype in ename]
+    for vtype in ["VDD", "VIN", "VDD_IN"]:
+        vdata = []
+        for ename, edata in power_data.items():
+            if vtype not in ename:
+                continue
+            if not (ename == "VDD_IN" and vtype == "VDD"):
+                continue
+            vdata.append(edata.raw)
+
+        if len(vdata) == 0 and vtype == "VIN" or vtype == "VDD_IN":
+            continue
+
         vdata_values: list[float] = [sum(pdraw_value) for pdraw_value in zip(*vdata)]
 
         # add as a metric
