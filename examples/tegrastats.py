@@ -5,22 +5,25 @@
 
 from __future__ import annotations
 
+import argparse
 import time
-from pathlib import Path
 
-from jetsontools import Tegrastats, get_energy, parse_tegrastats
+from jetsontools import TegraData, TegraStats
 
 
 def main() -> None:
     """Showcase basic usage of Tegrastats."""
-    example_path = Path(__file__).parent / "output.txt"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--interval", type=int, default=5)
+    parser.add_argument("--duration", type=int, default=5)
+    parser.add_argument("--output", type=str, default=None)
+    args = parser.parse_args()
 
-    interval = 5  # sample every 5 ms
-    duration = 5  # 5 seconds of sampling
+    tegrastats = TegraStats(output=args.output, interval=args.interval)
 
     t0 = time.time()
-    with Tegrastats(example_path, interval):
-        time.sleep(duration)
+    with tegrastats:
+        time.sleep(args.duration)
     t1 = time.time()
     total = t1 - t0
 
@@ -28,20 +31,16 @@ def main() -> None:
     print("This is due to waiting for tegrastats process to open.")
 
     # should be roughly 1000 / interval * duration entries
-    with example_path.open("r") as f:
-        lines = f.readlines()
+    tegradata: TegraData = tegrastats.data
 
-        print(
-            f"Total of: {len(lines)} entries found, compared to {1000 / interval * duration}.",
-        )
-        print("Loss is expected.")
-
-    # parse the output
-    output = parse_tegrastats(example_path)
+    print(
+        f"Total of: {len(tegradata)} entries found, compared to {1000 / args.interval * args.duration}.",
+    )
+    print("Loss is expected.")
 
     # parse the energy
-    energy_data = get_energy(output)
-    for mname, metric in energy_data.items():
+    power_data = tegradata.powerdraw
+    for mname, metric in power_data.items():
         print(f"{mname}: {metric.mean} mW")
 
 
