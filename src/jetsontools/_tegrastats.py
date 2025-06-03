@@ -99,6 +99,7 @@ class TegraStats:
             The tegrastats data
 
         """
+        f: io.TextIOBase
         if self._output is not None:
             f = self._output.open("r")
         else:
