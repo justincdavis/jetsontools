@@ -1,7 +1,7 @@
 # Copyright (c) 2025 Justin Davis (davisjustin302@gmail.com)
 #
 # MIT License
-# ruff: noqa: S404, S603, S607, T201
+# ruff: noqa: S404, S603, S607, T201, PLC0415
 from __future__ import annotations
 
 import re
@@ -126,7 +126,7 @@ def _cuda_version() -> str:
 
 def _opencv_version_and_cuda() -> tuple[str, str]:
     try:
-        import cv2  # noqa: PLC0415
+        import cv2  # type: ignore[import-untyped, import-not-found]
     except ImportError:
         return "FALSE", "FALSE"
 
