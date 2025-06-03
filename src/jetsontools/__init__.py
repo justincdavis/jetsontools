@@ -12,8 +12,10 @@ info
 
 Classes
 -------
-Tegrastats
+TegraStats
     Runs tegrastats in a separate process and stores output in a file.
+TegraData
+    Container for tegrastats data with parsing and filtering capabilities.
 
 Functions
 ---------
@@ -104,11 +106,13 @@ if level is not None and level.upper() not in [
 
 from . import info
 from .info import get_info
-from ._tegrastats import Tegrastats
+from ._tegradata import TegraData
+from ._tegrastats import TegraStats
 from ._parsing import parse_tegrastats, get_data, get_powerdraw, filter_data
 
 __all__ = [
-    "Tegrastats",
+    "TegraData",
+    "TegraStats",
     "filter_data",
     "get_data",
     "get_info",

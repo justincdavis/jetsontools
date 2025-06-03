@@ -4,8 +4,9 @@
 # ruff: noqa: S404, S603
 from __future__ import annotations
 
+import io
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import mean, median
 from typing import TYPE_CHECKING
@@ -20,7 +21,7 @@ _log = logging.getLogger(__name__)
 
 @dataclass
 class Metric:
-    raw: list[float | int]
+    raw: list[float | int] = field(repr=False)
     mean: float | int = -1.0
     median: float | int = -1.0
     min: float | int = -1.0
@@ -37,7 +38,7 @@ class Metric:
         self.mean = mean(self.raw)
 
 
-def parse_tegrastats(file: Path | str) -> list[dict[str, str]]:
+def parse_tegrastats(file: Path | str | io.TextIOBase) -> list[dict[str, str]]:
     """
     Parse a file written by Tegrastats or tegrastats.
 
@@ -101,13 +102,17 @@ def parse_tegrastats(file: Path | str) -> list[dict[str, str]]:
         If the file does not exist
 
     """
-    file = Path(file)
-    if not file.exists():
-        err_msg = f"Could not find tegrastats output: {file}"
-        raise FileNotFoundError(err_msg)
+    lines: list[str]
+    if isinstance(file, io.TextIOBase):
+        lines = [str(line) for line in file.readlines()]
+    else:
+        file = Path(file)
+        if not file.exists():
+            err_msg = f"Could not find tegrastats output: {file}"
+            raise FileNotFoundError(err_msg)
 
-    with file.open("r") as f:
-        lines = f.readlines()
+        with file.open("r") as f:
+            lines = f.readlines()
 
     _log.debug(f"Parsing tegrastats output with: {len(lines)} entries")
 
@@ -311,11 +316,11 @@ def get_powerdraw(
         for ename, edata in power_data.items():
             if vtype not in ename:
                 continue
-            if not (ename == "VDD_IN" and vtype == "VDD"):
+            if vtype == "VDD" and ename == "VDD_IN":
                 continue
             vdata.append(edata.raw)
 
-        if len(vdata) == 0 and vtype == "VIN" or vtype == "VDD_IN":
+        if len(vdata) == 0:
             continue
 
         vdata_values: list[float] = [sum(pdraw_value) for pdraw_value in zip(*vdata)]
