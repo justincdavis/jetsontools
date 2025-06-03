@@ -29,8 +29,25 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
-    'sphinx.ext.mathjax',
+    "sphinx.ext.mathjax",
+    "sphinx.ext.viewcode",
+    "sphinx_design",
+    "myst_parser",
 ]
+
+myst_enable_extensions = [
+    "colon_fence",
+    "deflist",
+    "substitution",
+]
+
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
+exclude_patterns = ["**/modules.rst"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 
 intersphinx_mapping = {
     "rtd": ("https://docs.readthedocs.io/en/stable/", None),
@@ -44,22 +61,29 @@ templates_path = ["_templates"]
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
-
-# HTML theme options
+# The theme to use for HTML and HTML Help pages.  See the documentation for
+# a list of builtin themes.
+html_theme = "furo"
 html_theme_options = {
-    'collapse_navigation': False,
-    'display_version': True,
-    'prev_next_buttons_location': 'bottom',
+    # "light_logo": "logo-light.png",
+    # "dark_logo": "logo-dark.png",
+    "sidebar_hide_name": False,
+    # "sidebar_structure": "toc",
+    # "toc_title": "Contents",
 }
+html_static_path = ["_static"]  # For additional CSS or custom static files.
+
+# Global toctree depth setting
+html_show_sourcelink = False
+html_title = "trtutils"
+html_copy_source = False
 
 # Custom sidebar templates
 html_sidebars = {
-    '**': ['globaltoc.html', 'relations.html', 'sourcelink.html', 'searchbox.html'],
+    "**": ["sidebar/scroll-start.html", "sidebar/brand.html", "sidebar/navigation.html", "sidebar/scroll-end.html"],
 }
 
-html_static_path = ["_static"]
-def setup(app):
-    app.add_css_file('theme_overrides.css')
+html_css_files = [
+    "center.cs",  # Make sure this path is correct relative to _static
+]

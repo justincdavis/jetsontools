@@ -7,26 +7,26 @@ Package for bounding boxes and their operations.
 
 Classes
 -------
-TegraStats
+:class:`TegraStats`
     Runs tegrastats in a separate process and stores output in a file.
-TegraData
+:class:`TegraData`
     Container for tegrastats data with parsing and filtering capabilities.
-JetsonInfo
+:class:`JetsonInfo`
     Tools for getting information about the Jetson device.
 
 Functions
 ---------
-get_info
+:func:`get_info`
     Get information about the Jetson device.
-get_data
+:func:`get_data`
     Parse the output of parse_tegrastats further to get specfic data.
-get_powerdraw
+:func:`get_powerdraw`
     Parse the output of parse_tegrastats to get all energy information.
-filter_data
+:func:`filter_data`
     Filter the Tegrastats output by selections of timestamps.
-set_log_level
+:func:`set_log_level`
     Set the log level for the jetsontools package.
-parse_tegrastats
+:func:`parse_tegrastats`
     Parse a file written by Tegrastats/tegrastats
 
 """

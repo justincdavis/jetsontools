@@ -7,4 +7,4 @@ import jetsontools
 
 
 def test_namespace():
-    assert jetsontools.Tegrastats is not None
+    assert jetsontools.TegraStats is not None

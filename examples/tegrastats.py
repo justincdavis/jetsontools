@@ -8,12 +8,11 @@ from __future__ import annotations
 import argparse
 import time
 
-from jetsontools import TegraStats, TegraData
+from jetsontools import TegraData, TegraStats
 
 
 def main() -> None:
     """Showcase basic usage of Tegrastats."""
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--interval", type=int, default=5)
     parser.add_argument("--duration", type=int, default=5)
