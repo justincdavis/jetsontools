@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import subprocess
+import time
 from pathlib import Path
 
 from ._info import get_info
@@ -30,7 +31,13 @@ def _profile(args: argparse.Namespace) -> None:
     with TegraStats(
         output=output_path, interval=args.interval, readall=args.readall, sudo=args.sudo
     ):
+        if args.spinup:
+            time.sleep(args.spinup)
+
         subprocess.run(cmd_args, check=True)
+
+        if args.cooldown:
+            time.sleep(args.cooldown)
 
 
 def _main() -> None:
@@ -75,6 +82,16 @@ def _main() -> None:
         type=int,
         default=1,
         help="The interval to wait between samples in milliseconds.",
+    )
+    profile_parser.add_argument(
+        "--spinup",
+        type=int,
+        help="The spinup time in seconds to wait before collecting data.",
+    )
+    profile_parser.add_argument(
+        "--cooldown",
+        type=int,
+        help="The cooldown time in seconds to collect after the command is run.",
     )
     profile_parser.add_argument(
         "--readall",
