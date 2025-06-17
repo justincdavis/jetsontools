@@ -1,7 +1,7 @@
 # Copyright (c) 2025 Justin Davis (davisjustin302@gmail.com)
 #
 # MIT License
-# ruff: noqa: S404, S603, S607, T201, PLC0415
+# ruff: noqa: S404, S603, S607, PLC0415
 from __future__ import annotations
 
 import re

@@ -33,6 +33,7 @@ class TegraStats:
         interval: int = 1000,
         *,
         readall: bool | None = None,
+        sudo: bool | None = None,
     ) -> None:
         """
         Create an instance of tegrastats with outputs to a file.
@@ -49,12 +50,16 @@ class TegraStats:
             Additional information varies by board.
             Can consume additional CPU resources.
             By default, will NOT readall
+        sudo : bool, optional
+            Optionally, run the command with sudo.
+            By default, will NOT run with sudo
 
         """
         # constructor args
         self._output: Path | None = Path(output) if output is not None else None
         self._interval = interval
         self._readall = readall
+        self._sudo = sudo
 
         # create a tempfile and open in the constructor
         # allows to access the file after the context manager is exited
@@ -68,7 +73,7 @@ class TegraStats:
         self._process = mp.Process(
             target=self._run,
             args=(self._output, self._tempfile, self._interval, self._start_flag),
-            kwargs={"readall": self._readall},
+            kwargs={"readall": self._readall, "sudo": self._sudo},
             daemon=True,
         )
 
@@ -132,7 +137,7 @@ class TegraStats:
         self._process = mp.Process(
             target=self._run,
             args=(self._output, self._tempfile, self._interval, self._start_flag),
-            kwargs={"readall": self._readall},
+            kwargs={"readall": self._readall, "sudo": self._sudo},
             daemon=True,
         )
         self.start()
@@ -145,6 +150,7 @@ class TegraStats:
         flag: mp.synchronize.Event,
         *,
         readall: bool | None = None,
+        sudo: bool | None = None,
     ) -> None:
         """
         Target function for process running tegrastats.
@@ -165,6 +171,9 @@ class TegraStats:
             Additional information varies by board.
             Can consume additional CPU resources.
             By default, will NOT readall
+        sudo : bool, optional
+            Optionally, run the command with sudo.
+            By default, will NOT run with sudo
 
         Raises
         ------
@@ -180,6 +189,8 @@ class TegraStats:
 
         # create the command and run the Popen call
         command = ["tegrastats", "--interval", str(interval)]
+        if sudo:
+            command.insert(0, "sudo")
         if readall:
             command.append("--readall")
         process = subprocess.Popen(
@@ -199,15 +210,17 @@ class TegraStats:
 
         _log.debug("No errors from process found")
 
-        # signal that the process is opened
-        flag.set()
-
         # read output while it exists
         # this will be stopped by the __exit__ call
         # which will call tegrastats --stop
         # resulting in the lines to cease
         while True:
             line = process.stdout.readline()
+
+            # send signal once first line is acquired
+            if not flag.is_set():
+                flag.set()
+
             if not line:
                 break
             f.write(f"{time.time()}::{line}")

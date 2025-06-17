@@ -1,7 +1,7 @@
 # Copyright (c) 2024 Justin Davis (davisjustin302@gmail.com)
 #
 # MIT License
-# ruff: noqa: E402, I001
+# ruff: noqa: I001
 """
 Package for bounding boxes and their operations.
 

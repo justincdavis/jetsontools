@@ -1,7 +1,6 @@
 # Copyright (c) 2024 Justin Davis (davisjustin302@gmail.com)
 #
 # MIT License
-# ruff: noqa: S404, S603
 from __future__ import annotations
 
 import io
@@ -304,7 +303,7 @@ def get_powerdraw(
     """
 
     def parse_energy_value(value: str) -> float:
-        return float(value.split("/")[0][:-2])
+        return float(value.split("/", maxsplit=1)[0][:-2])
 
     names = [name for name in data[0] if "VDD" in name or "VIN" in name]
     power_data = get_data(data, names, parse_energy_value)
