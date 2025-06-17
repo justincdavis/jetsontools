@@ -72,6 +72,30 @@ L4T_TO_JETPACK: dict[str, str] = {
     "23.1": "2.0",
 }
 
+# source: https://developer.nvidia.com/embedded/jetson-modules
+BOARD_MEMORY_BITRATE: dict[str, int] = {
+    # Orin series
+    "Orin AGX 64Gb": 256,
+    "Orin AGX 32Gb": 256,
+    "Orin NX 16Gb": 128,
+    "Orin NX 8Gb": 128,
+    "Orin Nano 8Gb": 128,
+    "Orin Nano 4Gb": 64,
+    # Xavier series
+    "Xavier AGX 64Gb": 256,
+    "Xavier AGX 32Gb": 256,
+    "Xavier NX 16Gb": 128,
+    "Xavier NX 8Gb": 128,
+    # Others
+    "TX2i": 128,
+    "TX2 8Gb": 128,
+    "TX2 4Gb": 128,
+    "TX2 NX": 128,
+    "Jetson Nano": 64,
+    # add backup for unknown
+    "UNKNOWN": 0,
+}
+
 
 def _run(cmd: list[str], *, strip: bool = True) -> str:
     try:
@@ -179,6 +203,23 @@ def _jetson_boardids() -> str:
     return _read("/proc/device-tree/nvidia,boardids")
 
 
+def _memory_size() -> str:
+    meminfo = _read("/proc/meminfo")
+    if not meminfo:
+        return "UNKNOWN"
+
+    for line in meminfo.splitlines():
+        if line.startswith("MemTotal:"):
+            mem_kb = int(line.split()[1])
+            mem_gb = mem_kb / (1024 * 1024)
+
+            # round to closest size
+            standard_sizes = [64, 32, 16, 8, 4]
+            closest_size = min(standard_sizes, key=lambda x: abs(x - mem_gb))
+            return f"{closest_size}GB"
+    return "UNKNOWN"
+
+
 def _codename_dts_module_carrier() -> tuple[str, str, str]:
     dtsfile = _read("/proc/device-tree/nvidia,dtsfilename")
     if not dtsfile:
@@ -248,15 +289,66 @@ def _jetson_jetpack(l4t: str) -> str:
     return L4T_TO_JETPACK.get(l4t, "UNKNOWN")
 
 
+def _get_board_name(model: str, memory_size: str) -> str:
+    model = model.upper()
+    memory_size = memory_size.replace("GB", "Gb")
+
+    # Identify the series
+    if "ORIN" in model:
+        series = "Orin"
+    elif "XAVIER" in model:
+        series = "Xavier"
+    elif "TX2" in model:
+        series = "TX2"
+    elif "NANO" in model:
+        # handle Jetson nano special
+        return "Jetson Nano"
+    else:
+        return "UNKNOWN"
+
+    # Identify form factor for Orin and Xavier
+    if series in ["Orin", "Xavier"]:
+        if "AGX" in model:
+            form_factor = "AGX"
+        elif "NX" in model:
+            form_factor = "NX"
+        elif "NANO" in model:
+            form_factor = "Nano"
+        else:
+            return "UNKNOWN"
+
+        return f"{series} {form_factor} {memory_size}"
+    if series == "TX2":
+        if "NX" in model:
+            return "TX2 NX"
+        if "4GB" in memory_size or "4Gb" in memory_size:
+            return "TX2 4Gb"
+        if "8GB" in memory_size or "8Gb" in memory_size:
+            return "TX2 8Gb"
+        if "TX2I" in model:
+            return "TX2i"
+        return f"TX2 {memory_size}"
+    return "UNKNOWN"
+
+
+def _get_mem_bitrate(name: str) -> int:
+    return BOARD_MEMORY_BITRATE.get(name, 0)
+
+
 @dataclass
 class JetsonInfo:
     """Class to store information about the Jetson device."""
 
     # core hardware info
+    name: str = field(repr=True)
     model: str = field(repr=True)
     jetpack: str = field(repr=True)
     l4t: str = field(repr=True)
     cuda_arch: str = field(repr=True)
+
+    # additional hardware info
+    memory_size: str = field(repr=True)
+    memory_bitrate: int = field(repr=True)
 
     # software info
     cuda: str = field(repr=True)
@@ -293,16 +385,22 @@ def _get_info() -> JetsonInfo:
     jetson_boardids = _jetson_boardids()
     codename, module, carrier = _codename_dts_module_carrier()
     cuda_arch = _cuda_arch_bin(jetson_model)
+    memory_size = _memory_size()
     serial_number = _serial_number()
     _, _, l4t = _jetson_l4t()
     jetpack = _jetson_jetpack(l4t)
+    name = _get_board_name(jetson_model, memory_size)
+    memory_bitrate = _get_mem_bitrate(name)
 
     return JetsonInfo(
+        name=name,
         model=jetson_model,
         jetpack=jetpack,
         l4t=l4t,
         cuda=cuda_version,
         cuda_arch=cuda_arch,
+        memory_size=memory_size,
+        memory_bitrate=memory_bitrate,
         cudnn=cudnn_version,
         tensorrt=tensorrt_version,
         visionworks=visionworks_version,
@@ -343,11 +441,14 @@ def get_info(*, verbose: bool | None = None) -> JetsonInfo:
     jetson_info = _get_info()
 
     if verbose:
+        LOG.info(f"Board name: {jetson_info.name}")
         LOG.info(f"Jetson model: {jetson_info.model}")
         LOG.info(f"Jetpack: {jetson_info.jetpack}")
         LOG.info(f"L4T: {jetson_info.l4t}")
         LOG.info(f"CUDA: {jetson_info.cuda}")
         LOG.info(f"CUDA arch: {jetson_info.cuda_arch}")
+        LOG.info(f"Memory size: {jetson_info.memory_size}")
+        LOG.info(f"Memory bitrate: {jetson_info.memory_bitrate}")
         LOG.info(f"CUDNN: {jetson_info.cudnn}")
         LOG.info(f"TensorRT: {jetson_info.tensorrt}")
         LOG.info(f"VisionWorks: {jetson_info.visionworks}")
