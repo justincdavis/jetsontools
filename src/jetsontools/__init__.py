@@ -1,7 +1,7 @@
 # Copyright (c) 2024 Justin Davis (davisjustin302@gmail.com)
 #
 # MIT License
-# ruff: noqa: E402, I001
+# ruff: noqa: I001
 """
 Package for bounding boxes and their operations.
 
@@ -55,6 +55,6 @@ __all__ = [
     "parse_tegrastats",
     "set_log_level",
 ]
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 _LOG.info(f"Initialized jetsontools with version {__version__}")

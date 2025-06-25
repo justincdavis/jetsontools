@@ -3,7 +3,9 @@
 # MIT License
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ._parsing import Metric, filter_data, get_data, get_powerdraw, parse_tegrastats
@@ -84,3 +86,20 @@ class TegraData:
         if self.filtered is None:
             return get_data(self.data, names, parsefunc)
         return get_data(self.filtered, names, parsefunc)
+
+    def save_as_csv(self: Self, file: Path | str) -> None:
+        """
+        Save the tegrastats data to a csv file.
+
+        Parameters
+        ----------
+        file : Path, str
+            The path to the csv file to save the data to.
+
+        """
+        file = Path(file)
+        data = self.filtered if self.filtered is not None else self.data
+        with file.open("w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=data[0].keys())
+            writer.writeheader()
+            writer.writerows(data)

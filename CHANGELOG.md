@@ -1,3 +1,11 @@
+## 0.1.1 (06-18-2025)
+
+### Added
+
+- TegraData.save_as_csv
+- cli, profile command
+- JetsonInfo board name, memory size, memory bitrate
+
 ## 0.1.0 (06-03-2025)
 
 ### Changed
