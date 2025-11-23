@@ -214,29 +214,81 @@ def filter_data(
         If the timestamp data cannot be found
 
     """
-    try:
-        per_inference: list[tuple[tuple[float, float], list[dict[str, str]]]] = []
-        unique_filtered: dict[str, dict[str, str]] = {}
-        for start, stop in timestamps:
-            inf_data: list[dict[str, str]] = []
-            for tdata in data:
-                raw_ts = tdata["timestamp"]
-                ts = float(raw_ts)
-                # iterate up while timestamp less than start
-                if ts < start:
-                    continue
-                # found some valid data
-                if start <= ts <= stop:
-                    inf_data.append(tdata)
-                    unique_filtered[raw_ts] = tdata
-                    continue
-                # if neither condition hits, then ts > stop
-                break
-            per_inference.append(((start, stop), inf_data))
-        return list(unique_filtered.values()), per_inference
-    except KeyError as e:
+
+    def binary_search(data: list[dict[str, str]], index: int, low_bound: float) -> int:
+        est_ts = float(data[index]["timestamp"])
+
+        # prune half based on the estimated timestamp
+        if est_ts < low_bound:
+            left, right = index + 1, len(data) - 1
+        else:
+            left, right = 0, index
+
+        result = -1
+
+        while left <= right:
+            mid = (left + right) // 2
+            mid_ts = float(data[mid]["timestamp"])
+
+            # search left
+            if mid_ts >= low_bound:
+                result = mid
+                right = mid - 1
+            # search right
+            else:
+                left = mid + 1
+
+        return result if result != -1 else 0
+
+    if len(timestamps) == 0:
+        return [], []
+
+    if len(data) == 0:
+        return [], []
+
+    if data[0].get("timestamp") is None:
         err_msg = "Could not get the timestamp data, did the data get written by jetsontools.Tegrastats?"
-        raise KeyError(err_msg) from e
+        raise KeyError(err_msg)
+
+    # compute some constants for improving indexing speed
+    total_time = float(data[-1]["timestamp"]) - float(data[0]["timestamp"])
+    time_per_index = total_time / len(data)
+
+    # initialize the output lists
+    per_inference: list[tuple[tuple[float, float], list[dict[str, str]]]] = []
+    unique_filtered: dict[str, dict[str, str]] = {}
+
+    # gather data per timestamp range
+    for start, stop in timestamps:
+        inf_data: list[dict[str, str]] = []
+
+        # compute an intelligent indexing in the data list
+        # assume a uniform distribution of timestamps from the tegradata
+        # then, we will compute the estimated index of the start timestamp
+        # then perform a binary search to find true index of start timestamp
+        relative_start = start - float(data[0]["timestamp"])
+        est_index = int(relative_start / time_per_index)
+        # clamp to valid bounds
+        est_index = max(0, min(est_index, len(data) - 1))
+        start_idx = binary_search(data, est_index, start)
+
+        # iterate from start until outside the range
+        for tdata in data[start_idx:]:
+            raw_ts = tdata["timestamp"]
+            ts = float(raw_ts)
+            # iterate up while timestamp less than start
+            # legacy check, keep for completeness
+            if ts < start:
+                continue
+            # found some valid data
+            if start <= ts <= stop:
+                inf_data.append(tdata)
+                unique_filtered[raw_ts] = tdata
+                continue
+            # if neither condition hits, then ts > stop
+            break
+        per_inference.append(((start, stop), inf_data))
+    return list(unique_filtered.values()), per_inference
 
 
 def get_data(

@@ -137,7 +137,7 @@ def _dpkg_query(pkg: str) -> str:
 def _cuda_version() -> str:
     ver_file = Path("/usr/local/cuda/version.txt")
     if ver_file.is_file():
-        txt = ver_file.read_text().strip()
+        txt = ver_file.read_text(encoding="utf-8").strip()
         return txt.replace("CUDA Version ", "")
     nvcc = Path("/usr/local/cuda/bin/nvcc")
     if nvcc.is_file():
