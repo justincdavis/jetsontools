@@ -115,6 +115,9 @@ def parse_tegrastats(file: Path | str | io.TextIOBase) -> list[dict[str, str]]:
 
     _log.debug(f"Parsing tegrastats output with: {len(lines)} entries")
 
+    if not lines:
+        return []
+
     py_delim = "::"
     python = False
     if py_delim in lines[0]:
@@ -122,6 +125,10 @@ def parse_tegrastats(file: Path | str | io.TextIOBase) -> list[dict[str, str]]:
 
     entries: list[dict[str, str]] = []
     for raw in lines:
+        # skip corrupted lines containing null bytes
+        if "\x00" in raw:
+            continue
+
         # make entry
         entry: dict[str, str] = {}
 
@@ -131,8 +138,13 @@ def parse_tegrastats(file: Path | str | io.TextIOBase) -> list[dict[str, str]]:
         # parse out python timestamp if exists
         timestamp = None
         if python:
-            timestamp, line = line.split(py_delim)
+            timestamp, line = line.split(py_delim, maxsplit=1)
         if timestamp:
+            # validate timestamp is a valid float (skip corrupted entries)
+            try:
+                float(timestamp)
+            except ValueError:
+                continue
             entry["timestamp"] = timestamp
 
         # parse remainder of line
@@ -252,7 +264,8 @@ def filter_data(
 
     # compute some constants for improving indexing speed
     total_time = float(data[-1]["timestamp"]) - float(data[0]["timestamp"])
-    time_per_index = total_time / len(data)
+    # Guard against single data point or all same timestamps
+    time_per_index = 1.0 if total_time == 0 else total_time / len(data)
 
     # initialize the output lists
     per_inference: list[tuple[tuple[float, float], list[dict[str, str]]]] = []

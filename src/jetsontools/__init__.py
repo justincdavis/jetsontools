@@ -55,6 +55,4 @@ __all__ = [
     "parse_tegrastats",
     "set_log_level",
 ]
-__version__ = "0.1.2"
-
-_LOG.info(f"Initialized jetsontools with version {__version__}")
+__version__ = "0.1.3"
