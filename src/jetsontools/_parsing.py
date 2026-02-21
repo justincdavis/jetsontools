@@ -265,10 +265,7 @@ def filter_data(
     # compute some constants for improving indexing speed
     total_time = float(data[-1]["timestamp"]) - float(data[0]["timestamp"])
     # Guard against single data point or all same timestamps
-    if total_time == 0:
-        time_per_index = 1.0
-    else:
-        time_per_index = total_time / len(data)
+    time_per_index = 1.0 if total_time == 0 else total_time / len(data)
 
     # initialize the output lists
     per_inference: list[tuple[tuple[float, float], list[dict[str, str]]]] = []

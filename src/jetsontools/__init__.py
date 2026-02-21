@@ -56,5 +56,3 @@ __all__ = [
     "set_log_level",
 ]
 __version__ = "0.1.3"
-
-_LOG.info(f"Initialized jetsontools with version {__version__}")
