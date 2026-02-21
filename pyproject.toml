@@ -35,7 +35,7 @@ classifiers = [
     "Intended Audience :: End Users/Desktop",
     "Typing :: Typed",
 ]
-requires-python=">=3.8, <=3.13"
+requires-python=">=3.8, <=3.14"
 dependencies = [
     "typing_extensions>=4.0.0",
 ]
