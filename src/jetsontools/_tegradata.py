@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class TegraData:
     """Container for tegrastats data with parsing and filtering capabilities."""
 
-    file: io.TextIOBase = field(init=True, repr=True)
+    file: Path | str | io.TextIOBase = field(init=True, repr=True)
     data: list[dict[str, str]] = field(init=False, repr=False)
     entries: int = field(default=0, init=False, repr=True)
     filtered: list[dict[str, str]] | None = field(default=None, init=False, repr=False)
@@ -31,7 +31,11 @@ class TegraData:
 
     def __post_init__(self: Self) -> None:
         """Initialize parsed data and entry count after object creation."""
-        self.data = parse_tegrastats(self.file)
+        if isinstance(self.file, (str, Path)):
+            with Path(self.file).open("r", encoding="ascii") as fh:
+                self.data = parse_tegrastats(fh)
+        else:
+            self.data = parse_tegrastats(self.file)
         self.entries = len(self.data)
 
     def __len__(self: Self) -> int:
