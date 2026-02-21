@@ -34,7 +34,6 @@ class TegraStats:
         *,
         readall: bool | None = None,
         sudo: bool | None = None,
-        emc: bool | None = None,
     ) -> None:
         """
         Create an instance of tegrastats with outputs to a file.
@@ -54,9 +53,6 @@ class TegraStats:
         sudo : bool, optional
             Optionally, run the command with sudo.
             By default, will NOT run with sudo
-        emc : bool, optional
-            Optionally, report EMC frequency information.
-            By default, will NOT report EMC frequency
 
         """
         # constructor args
@@ -64,7 +60,6 @@ class TegraStats:
         self._interval = interval
         self._readall = readall
         self._sudo = sudo
-        self._emc = emc
 
         # create a tempfile and open in the constructor
         # allows to access the file after the context manager is exited
@@ -78,7 +73,7 @@ class TegraStats:
         self._process = mp.Process(
             target=self._run,
             args=(self._output, self._tempfile, self._interval, self._start_flag),
-            kwargs={"readall": self._readall, "sudo": self._sudo, "emc": self._emc},
+            kwargs={"readall": self._readall, "sudo": self._sudo},
             daemon=True,
         )
 
@@ -142,7 +137,7 @@ class TegraStats:
         self._process = mp.Process(
             target=self._run,
             args=(self._output, self._tempfile, self._interval, self._start_flag),
-            kwargs={"readall": self._readall, "sudo": self._sudo, "emc": self._emc},
+            kwargs={"readall": self._readall, "sudo": self._sudo},
             daemon=True,
         )
         self.start()
@@ -156,7 +151,6 @@ class TegraStats:
         *,
         readall: bool | None = None,
         sudo: bool | None = None,
-        emc: bool | None = None,
     ) -> None:
         """
         Target function for process running tegrastats.
@@ -180,9 +174,6 @@ class TegraStats:
         sudo : bool, optional
             Optionally, run the command with sudo.
             By default, will NOT run with sudo
-        emc : bool, optional
-            Optionally, report EMC frequency information.
-            By default, will NOT report EMC frequency
 
         Raises
         ------
@@ -202,8 +193,6 @@ class TegraStats:
             command.insert(0, "sudo")
         if readall:
             command.append("--readall")
-        if emc:
-            command.append("--emc")
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
