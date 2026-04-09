@@ -55,4 +55,4 @@ __all__ = [
     "parse_tegrastats",
     "set_log_level",
 ]
-__version__ = "0.1.3"
+__version__ = "0.1.4"
