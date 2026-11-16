@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 _log = logging.getLogger(__name__)
-_MP_CONTEXT = mp.get_context("fork")
 
 
 class TegraStats:
@@ -70,8 +69,9 @@ class TegraStats:
         )
 
         # handle the tegrastats process
-        self._start_flag: mp.synchronize.Event = _MP_CONTEXT.Event()
-        self._process = _MP_CONTEXT.Process(
+        self._mp_context = mp.get_context("fork")
+        self._start_flag: mp.synchronize.Event = self._mp_context.Event()
+        self._process = self._mp_context.Process(
             target=self._run,
             args=(self._output, self._tempfile, self._interval, self._start_flag),
             kwargs={"readall": self._readall, "sudo": self._sudo},
@@ -135,7 +135,7 @@ class TegraStats:
     def reset(self: Self) -> None:
         """Reset the Tegrastats process and data file."""
         self.stop()
-        self._process = _MP_CONTEXT.Process(
+        self._process = self._mp_context.Process(
             target=self._run,
             args=(self._output, self._tempfile, self._interval, self._start_flag),
             kwargs={"readall": self._readall, "sudo": self._sudo},

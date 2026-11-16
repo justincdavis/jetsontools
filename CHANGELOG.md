@@ -6,7 +6,7 @@
 
 ### Fixed
 
-- TegraStats on Python 3.14+, where multiprocessing no longer defaults to fork
+- TegraStats on Python 3.14+
 
 ## 0.1.1 (06-18-2025)
 
