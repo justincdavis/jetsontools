@@ -7,15 +7,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python 3.14
-      uses: actions/setup-python@v1
-      with:
-        python-version: "3.14"
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install build
+    - uses: actions/checkout@v4
+    - uses: astral-sh/setup-uv@v6
     - name: Build jetsontools
+      run: uv build
+    - name: Install and import the wheel on each Python
       run: |
-        python -m build
+        for version in 3.8 3.9 3.10 3.11 3.12 3.13 3.14 3.15; do
+          echo "::group::Python ${version}"
+          uv venv ".venv-${version}" --python "${version}"
+          uv pip install --python ".venv-${version}" dist/*.whl
+          ".venv-${version}/bin/python" -c "import jetsontools"
+          echo "::endgroup::"
+        done
