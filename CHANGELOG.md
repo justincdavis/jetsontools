@@ -1,3 +1,13 @@
+## Unreleased
+
+### Added
+
+- Python 3.15 support
+
+### Fixed
+
+- TegraStats on Python 3.14+
+
 ## 0.1.1 (06-18-2025)
 
 ### Added
