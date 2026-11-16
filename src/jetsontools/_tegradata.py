@@ -3,6 +3,7 @@
 # MIT License
 from __future__ import annotations
 
+import copy
 import csv
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,11 +20,27 @@ if TYPE_CHECKING:
 
 @dataclass
 class TegraData:
-    """Container for tegrastats data with parsing and filtering capabilities."""
+    """
+    Container for tegrastats data with parsing and filtering capabilities.
+
+    Attributes
+    ----------
+    windows : dict[str, tuple[float, float]]
+        The (start, stop) time.time() timestamps of named windows, by name.
+    duration : float
+        The seconds covered by the data, regardless of filter.
+        For data from window, the length of the window.
+        Otherwise, the time between the first and last entry.
+
+    """
 
     file: Path | str | io.TextIOBase = field(init=True, repr=True)
+    windows: dict[str, tuple[float, float]] = field(
+        default_factory=dict, init=True, repr=False
+    )
     data: list[dict[str, str]] = field(init=False, repr=False)
     entries: int = field(default=0, init=False, repr=True)
+    duration: float = field(default=0.0, init=False, repr=True)
     filtered: list[dict[str, str]] | None = field(default=None, init=False, repr=False)
     filtered_entries: list[tuple[tuple[float, float], list[dict[str, str]]]] | None = (
         field(default=None, init=False, repr=False)
@@ -37,6 +54,10 @@ class TegraData:
         else:
             self.data = parse_tegrastats(self.file)
         self.entries = len(self.data)
+        if self.data and "timestamp" in self.data[0]:
+            self.duration = float(self.data[-1]["timestamp"]) - float(
+                self.data[0]["timestamp"]
+            )
 
     def __len__(self: Self) -> int:
         return self.entries
@@ -67,6 +88,48 @@ class TegraData:
 
         """
         self.filtered, self.filtered_entries = filter_data(self.data, timestamps)
+
+    def window(self: Self, name: str) -> TegraData:
+        """
+        Get the data collected during a named window.
+
+        Uses all of the data, regardless of filter.
+        Returns a new TegraData, this TegraData is unchanged.
+
+        Parameters
+        ----------
+        name : str
+            The name of the window, from TegraStats.window or the windows field.
+
+        Returns
+        -------
+        TegraData
+            The data containing only the entries within the window.
+
+        Raises
+        ------
+        KeyError
+            If there is no window with the name.
+        ValueError
+            If no entries are within the window.
+
+        """
+        if name not in self.windows:
+            err_msg = f"No window named: {name}, windows are: {list(self.windows)}"
+            raise KeyError(err_msg)
+        start, stop = self.windows[name]
+        entries, _ = filter_data(self.data, [(start, stop)])
+        if not entries:
+            err_msg = f"No tegrastats entries within window: {name}, use a longer window or shorter interval"
+            raise ValueError(err_msg)
+        window = copy.copy(self)
+        window.data = entries
+        window.entries = len(entries)
+        window.filtered = None
+        window.filtered_entries = None
+        window.windows = dict(self.windows)
+        window.duration = stop - start
+        return window
 
     def parse(
         self: Self, names: list[str], parsefunc: Callable[[str], float | int]

@@ -17,6 +17,7 @@ from jetsontools._tegradata import TegraData
 
 if TYPE_CHECKING:
     import io
+    from collections.abc import Generator
     from types import TracebackType
 
     from typing_extensions import Self
@@ -60,6 +61,7 @@ class TegraStats:
         self._interval = interval
         self._readall = readall
         self._sudo = sudo
+        self._windows: dict[str, tuple[float, float]] = {}
 
         # create a tempfile and open in the constructor
         # allows to access the file after the context manager is exited
@@ -112,7 +114,40 @@ class TegraStats:
             # For tempfile, seek to beginning before reading
             self._tempfile.seek(0)
             f = self._tempfile
-        return TegraData(f)
+        return TegraData(f, windows=dict(self._windows))
+
+    @contextlib.contextmanager
+    def window(self: Self, name: str) -> Generator[None, None, None]:
+        """
+        Mark a block of code as a named window.
+
+        The data collected during the block can then be found with
+        TegraData.window. Reusing a name replaces the window.
+
+        Parameters
+        ----------
+        name : str
+            The name of the window.
+
+        Yields
+        ------
+        None
+            Runs the block of code inside the window.
+
+        Examples
+        --------
+        >>> with TegraStats(interval=50) as tegrastats:
+        ...     with tegrastats.window("inference"):
+        ...         run_model()
+        >>> inference = tegrastats.data.window("inference")
+        >>> inference.powerdraw["VDD_GPU_SOC"].mean
+
+        """
+        start = time.time()
+        try:
+            yield
+        finally:
+            self._windows[name] = (start, time.time())
 
     def start(self: Self) -> None:
         """Start running Tegrastats."""

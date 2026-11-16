@@ -3,6 +3,7 @@
 ### Added
 
 - Python 3.15 support
+- TegraStats.window marks named blocks of code, TegraData.window gets the data collected in one, TegraData.duration
 
 ### Fixed
 
