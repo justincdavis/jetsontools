@@ -251,9 +251,20 @@ class TegraData:
         file : Path, str
             The path to the csv file to save the data to.
 
+        Raises
+        ------
+        ValueError
+            If there is no data to save, for example after a filter
+            which selected no entries.
+
         """
-        file = Path(file)
         data = self.filtered if self.filtered is not None else self.data
+        if not data:
+            err_msg = (
+                "No data to save, the data is empty or the filter selected no entries"
+            )
+            raise ValueError(err_msg)
+        file = Path(file)
         with file.open("w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=data[0].keys())
             writer.writeheader()

@@ -11,12 +11,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tests.logs._helpers import (
-    NAME_COLLISION,
-    NO_DATE_TIME,
-    NO_POWER_UNITS,
     TEMPERATURE,
     UNAVAILABLE_TEMPERATURE,
-    known_gap,
     load,
 )
 
@@ -25,12 +21,19 @@ if TYPE_CHECKING:
     from jetsontools._parsing import Metric
     from tests.logs._helpers import Recording
 
-CORE_FIELDS = {"timestamp", "DATE", "TIME", "LFB", "SWAP", "CACHED", "CPU", "GR3D_FREQ"}
+CORE_FIELDS = {"timestamp", "RAM", "LFB", "SWAP", "CACHED", "CPU", "GR3D_FREQ"}
 RAILS = {
     "orinagx": {"VDD_GPU_SOC", "VDD_CPU_CV", "VIN_SYS_5V0", "VDDQ_VDD2_1V8AO"},
     "orinnx": {"VDD_IN", "VDD_CPU_GPU_CV", "VDD_SOC"},
     "xaviernx": {"VDD_IN", "VDD_CPU_GPU_CV", "VDD_SOC"},
-    "xavieragx": {"GPU", "CPU", "SOC", "CV", "VDDRQ", "SYS5V"},
+    "xavieragx": {
+        "VDD_GPU",
+        "VDD_CPU",
+        "VDD_SOC",
+        "VDD_CV",
+        "VDDRQ",
+        "VIN_SYS5V",
+    },
 }
 PERCENT = re.compile(r"(\d+)%")
 
@@ -48,11 +51,8 @@ def _consistent(metric: Metric) -> None:
     assert metric.max == max(metric.raw)
 
 
-def test_core_fields(
-    request: pytest.FixtureRequest, recording: Recording, data: TegraData
-) -> None:
+def test_core_fields(data: TegraData) -> None:
     """Every recording has the fields all tegrastats versions report."""
-    known_gap(request, recording, NO_DATE_TIME)
     assert set(data.data[0]) >= CORE_FIELDS
     assert "RAM" in data.data[0]
 
@@ -82,11 +82,8 @@ def test_orin_and_xavier_rails_differ() -> None:
     assert "VIN_SYS_5V0" not in nx.data[0]
 
 
-def test_memory(
-    request: pytest.FixtureRequest, recording: Recording, data: TegraData
-) -> None:
+def test_memory(data: TegraData) -> None:
     """RAM and SWAP are used/total in MB and used never exceeds total."""
-    known_gap(request, recording, NO_DATE_TIME)
     for entry in data.data:
         for name in ("RAM", "SWAP"):
             used, total = entry[name][:-2].split("/")
@@ -95,11 +92,8 @@ def test_memory(
         assert re.fullmatch(r"\d+MB", entry["CACHED"])
 
 
-def test_cpu(
-    request: pytest.FixtureRequest, recording: Recording, data: TegraData
-) -> None:
+def test_cpu(data: TegraData) -> None:
     """CPU is a bracketed list of per-core percentages, the same length each sample."""
-    known_gap(request, recording, NAME_COLLISION, kind="all")
     cores = set()
     for entry in data.data:
         value = entry["CPU"]
@@ -141,12 +135,8 @@ def test_parse_metric(data: TegraData) -> None:
         _consistent(metric)
 
 
-def test_powerdraw(
-    request: pytest.FixtureRequest, recording: Recording, data: TegraData
-) -> None:
+def test_powerdraw(recording: Recording, data: TegraData) -> None:
     """Power draw metrics are consistent, non-negative mW, and empty without rails."""
-    if recording.sudo:
-        known_gap(request, recording, NO_POWER_UNITS)
     rails = [name for name in data.data[0] if "VDD" in name or "VIN" in name]
     power = data.powerdraw
     if not rails:

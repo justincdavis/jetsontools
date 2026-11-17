@@ -19,6 +19,16 @@ if TYPE_CHECKING:
 _log = logging.getLogger(__name__)
 
 _DLA_NAME = re.compile(r"NVDLA\d+")
+_DATE = re.compile(r"\d{2}-\d{2}-\d{4}")
+_UNITLESS_POWER = re.compile(r"\d+/\d+")
+_XAVIER_RAILS = {
+    "GPU": "VDD_GPU",
+    "CPU": "VDD_CPU",
+    "SOC": "VDD_SOC",
+    "CV": "VDD_CV",
+    "VDDRQ": "VDDRQ",
+    "SYS5V": "VIN_SYS5V",
+}
 
 
 @dataclass
@@ -154,9 +164,11 @@ def parse_tegrastats(file: Path | str | io.TextIOBase) -> list[dict[str, str]]:
         data = line.split(" ")
 
         # first two entires are always date and time (minute resolution)
-        entry["DATE"] = data[0]
-        entry["TIME"] = data[1]
-        data = data[2:]
+        # except on Xavier AGX, which reports neither
+        if _DATE.fullmatch(data[0]):
+            entry["DATE"] = data[0]
+            entry["TIME"] = data[1]
+            data = data[2:]
 
         # from now on each entry is UPPERCASE value
         # additional values will start with (
@@ -165,7 +177,10 @@ def parse_tegrastats(file: Path | str | io.TextIOBase) -> list[dict[str, str]]:
         # by removing the ()
         name = None
         paran = False
-        for value in data:
+        index = 0
+        while index < len(data):
+            value = data[index]
+            index += 1
             if name is None:
                 # handle paran data
                 if value[0] == "(":
@@ -177,6 +192,10 @@ def parse_tegrastats(file: Path | str | io.TextIOBase) -> list[dict[str, str]]:
                     soc, temp = value.split("@")
                     temp_name = f"{soc.upper()}_TEMP"
                     entry[temp_name] = temp
+                elif value == "MTS" and data[index : index + 4 : 2] == ["fg", "bg"]:
+                    entry["MTS_FG"] = data[index + 1]
+                    entry["MTS_BG"] = data[index + 3]
+                    index += 4
                 else:
                     name = value
             else:
@@ -184,6 +203,10 @@ def parse_tegrastats(file: Path | str | io.TextIOBase) -> list[dict[str, str]]:
                     new_value = value[:-1]
                     paran = False
                     entry[name] = new_value
+                    name = None
+                elif name in _XAVIER_RAILS and _UNITLESS_POWER.fullmatch(value):
+                    current, average = value.split("/")
+                    entry[_XAVIER_RAILS[name]] = f"{current}mW/{average}mW"
                     name = None
                 else:
                     entry[name] = value
