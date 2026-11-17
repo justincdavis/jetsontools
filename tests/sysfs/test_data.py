@@ -30,6 +30,7 @@ def test_sysfs_data_filtered() -> None:
     data.filter([(5.0, 6.0)])
     assert data.sysfs_counters == {}
     assert data.sysfs_gauges == {}
+    assert data.sysfs_energy == {}
 
 
 def test_sysfs_data_window_filter() -> None:

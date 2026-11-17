@@ -17,7 +17,7 @@ from ._parsing import (
     get_powerdraw,
     parse_tegrastats,
 )
-from ._sysfs import _counters, _gauges, _parse_sysfs
+from ._sysfs import _counters, _energy, _gauges, _parse_sysfs
 
 if TYPE_CHECKING:
     import io
@@ -148,6 +148,25 @@ class TegraData:
 
         """
         return _gauges(self.sysfs_kinds, self.sysfs_series, self._sysfs_ranges())
+
+    @property
+    def sysfs_energy(self: Self) -> dict[str, float]:
+        """
+        Energy used by each power rail over the data.
+
+        For each rail sampled as the gauges <rail>.mV and <rail>.mA,
+        as read_sysfs_power samples them, integrates the power over time
+        within the data, each timestamp range given to filter, or the window.
+
+        Returns
+        -------
+        dict[str, float]
+            The energy in millijoules of each rail, by rail name,
+            and TOTAL, the sum over the rails.
+            Empty if the data has no power rails.
+
+        """
+        return _energy(self.sysfs_kinds, self.sysfs_series, self._sysfs_ranges())
 
     def _sysfs_ranges(self: Self) -> list[tuple[float, float]] | None:
         ranges = None

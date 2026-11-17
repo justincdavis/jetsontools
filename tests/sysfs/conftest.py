@@ -14,3 +14,4 @@ if TYPE_CHECKING:
 @pytest.fixture(autouse=True)
 def _no_real_sysfs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("jetsontools._sysfs._DEVICES", str(tmp_path / "devices"))
+    monkeypatch.setattr("jetsontools._sysfs._INA3221", str(tmp_path / "ina3221"))

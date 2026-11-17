@@ -37,6 +37,22 @@ SYSFS_LOG = """#SYSFS nvdla0 counter 50.0 /sys/bus/platform/devices/15880000.nvd
 4.0::temp 400
 4.5::nvdla0 truncated
 """
+POWER_LOG = """#SYSFS VDD_GPU_SOC.mV gauge 50.0 /a/in1_input
+#SYSFS VDD_GPU_SOC.mA gauge 50.0 /a/curr1_input
+#SYSFS VIN_SYS_5V0.mV gauge 50.0 /a/in3_input
+#SYSFS VIN_SYS_5V0.mA gauge 50.0 /a/curr3_input
+1.0::VDD_GPU_SOC.mV 20000
+1.0::VDD_GPU_SOC.mA 100
+1.0::VIN_SYS_5V0.mV 5000
+1.0::VIN_SYS_5V0.mA 200
+2.0::VDD_GPU_SOC.mA 100
+2.0::VIN_SYS_5V0.mA 200
+2.5::VDD_GPU_SOC.mV 20000
+3.0::VDD_GPU_SOC.mA 300
+3.0::VIN_SYS_5V0.mA 200
+4.0::VDD_GPU_SOC.mA 300
+4.0::VIN_SYS_5V0.mA 200
+"""
 FAKE_TEGRASTATS = """#!/bin/sh
 [ "$1" = --stop ] && exit 0
 while echo "11-16-2026 00:01:18 VDD_GPU_SOC 4392mW/4392mW"; do sleep 0.05; done
@@ -77,3 +93,10 @@ def _devices(root: Path, names: dict[str, str]) -> None:
 
 
 ACTIVE = "power/runtime_active_time"
+
+
+def _ina3221(root: Path, device: str, files: dict[str, object]) -> None:
+    hwmon = root / "ina3221" / device / "hwmon" / f"hwmon{device[-1]}"
+    hwmon.mkdir(parents=True)
+    for file, value in files.items():
+        (hwmon / file).write_text(f"{value}\n")

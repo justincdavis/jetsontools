@@ -83,9 +83,10 @@ def test_tegrastats_sysfs_missing(
             interval=50,
             read_sysfs_dla=True,
             read_sysfs_media=True,
+            read_sysfs_power=True,
             sysfs=[SysfsReader("gone", str(tmp_path / "gone"))],
         )
-    for name in ("read_sysfs_dla", "read_sysfs_media", "gone"):
+    for name in ("read_sysfs_dla", "read_sysfs_media", "read_sysfs_power", "gone"):
         assert name in caplog.text
     assert tegrastats.sysfs == []
     with tegrastats, tegrastats.window("w"):
