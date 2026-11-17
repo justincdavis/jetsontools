@@ -9,7 +9,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ._parsing import Metric, filter_data, get_data, get_powerdraw, parse_tegrastats
+from ._parsing import (
+    Metric,
+    filter_data,
+    get_data,
+    get_dla_utilization,
+    get_powerdraw,
+    parse_tegrastats,
+)
+from ._sysfs import _counters, _gauges, _parse_sysfs
 
 if TYPE_CHECKING:
     import io
@@ -31,6 +39,10 @@ class TegraData:
         The seconds covered by the data, regardless of filter.
         For data from window, the length of the window.
         Otherwise, the time between the first and last entry.
+    span : tuple[float, float] | None
+        For data from window, the (start, stop) timestamps of the window.
+    sysfs : Path | str | io.TextIOBase | None
+        The sysfs samples written by TegraStats, if any.
 
     """
 
@@ -38,12 +50,20 @@ class TegraData:
     windows: dict[str, tuple[float, float]] = field(
         default_factory=dict, init=True, repr=False
     )
+    sysfs: Path | str | io.TextIOBase | None = field(
+        default=None, init=True, repr=False
+    )
     data: list[dict[str, str]] = field(init=False, repr=False)
     entries: int = field(default=0, init=False, repr=True)
     duration: float = field(default=0.0, init=False, repr=True)
     filtered: list[dict[str, str]] | None = field(default=None, init=False, repr=False)
     filtered_entries: list[tuple[tuple[float, float], list[dict[str, str]]]] | None = (
         field(default=None, init=False, repr=False)
+    )
+    span: tuple[float, float] | None = field(default=None, init=False, repr=False)
+    sysfs_kinds: dict[str, str] = field(default_factory=dict, init=False, repr=False)
+    sysfs_series: dict[str, tuple[list[float], list[float]]] = field(
+        default_factory=dict, init=False, repr=False
     )
 
     def __post_init__(self: Self) -> None:
@@ -54,6 +74,8 @@ class TegraData:
         else:
             self.data = parse_tegrastats(self.file)
         self.entries = len(self.data)
+        if self.sysfs is not None:
+            self.sysfs_kinds, self.sysfs_series = _parse_sysfs(self.sysfs)
         if self.data and "timestamp" in self.data[0]:
             self.duration = float(self.data[-1]["timestamp"]) - float(
                 self.data[0]["timestamp"]
@@ -76,6 +98,71 @@ class TegraData:
         if self.filtered is None:
             return get_powerdraw(self.data)
         return get_powerdraw(self.filtered)
+
+    @property
+    def dla_utilization(self: Self) -> dict[str, Metric]:
+        """
+        DLA utilization metrics from the data.
+
+        tegrastats only reports the DLA cores when run with sudo.
+
+        Returns
+        -------
+        dict[str, Metric]
+            Utilization (%) metrics by DLA core name (NVDLA0, ...).
+            Empty if the data has no DLA entries.
+
+        """
+        if self.filtered is None:
+            return get_dla_utilization(self.data)
+        return get_dla_utilization(self.filtered)
+
+    @property
+    def sysfs_counters(self: Self) -> dict[str, float]:
+        """
+        Change of each sysfs counter over the data.
+
+        Measured between the first and last sample within the data,
+        or within each timestamp range given to filter, summed over the ranges.
+        Windows from TegraStats.window have samples at both edges.
+
+        Returns
+        -------
+        dict[str, float]
+            The change of each counter, by reader name.
+            Readers without samples in the data are not included.
+
+        """
+        return _counters(self.sysfs_kinds, self.sysfs_series, self._sysfs_ranges())
+
+    @property
+    def sysfs_gauges(self: Self) -> dict[str, Metric]:
+        """
+        Samples of each sysfs gauge over the data.
+
+        Returns
+        -------
+        dict[str, Metric]
+            The metrics of each gauge, by reader name.
+            Readers without samples in the data are not included.
+
+        """
+        return _gauges(self.sysfs_kinds, self.sysfs_series, self._sysfs_ranges())
+
+    def _sysfs_ranges(self: Self) -> list[tuple[float, float]] | None:
+        ranges = None
+        if self.filtered_entries is not None:
+            ranges = [timestamps for timestamps, _ in self.filtered_entries]
+        if self.span is None:
+            return ranges
+        if ranges is None:
+            return [self.span]
+        low, high = self.span
+        return [
+            (max(start, low), min(stop, high))
+            for start, stop in ranges
+            if max(start, low) <= min(stop, high)
+        ]
 
     def filter(self: Self, timestamps: list[tuple[float, float]]) -> None:
         """
@@ -129,6 +216,7 @@ class TegraData:
         window.filtered_entries = None
         window.windows = dict(self.windows)
         window.duration = stop - start
+        window.span = (start, stop)
         return window
 
     def parse(

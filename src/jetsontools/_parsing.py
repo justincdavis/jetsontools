@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import mean, median
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 _log = logging.getLogger(__name__)
+
+_DLA_NAME = re.compile(r"NVDLA\d+")
 
 
 @dataclass
@@ -397,3 +400,40 @@ def get_powerdraw(
         power_data[mname] = metric
 
     return power_data
+
+
+def get_dla_utilization(
+    data: list[dict[str, str]],
+) -> dict[str, Metric]:
+    """
+    Parse the output from parse_tegrastats to give DLA utilization values.
+
+    tegrastats only reports the DLA cores (NVDLA0, NVDLA1) when run with sudo.
+    A core reported as off has a utilization of 0%.
+
+    Parameters
+    ----------
+    data : list[dict[str, str]]
+        The output of parse_tegrastats
+
+    Returns
+    -------
+    dict[str, Metric]
+        The utilization (%) of each DLA core, by name (NVDLA0, ...).
+        Empty if the data has no DLA entries.
+
+    """
+
+    def parse_dla_value(value: str) -> float:
+        if value == "off":
+            return 0.0
+        utilization, percent, _ = value.partition("%")
+        if not percent:
+            err_msg = f"Could not parse DLA utilization from: {value}"
+            raise ValueError(err_msg)
+        return float(utilization)
+
+    if not data:
+        return {}
+    names = [name for name in data[0] if _DLA_NAME.fullmatch(name)]
+    return get_data(data, names, parse_dla_value)
