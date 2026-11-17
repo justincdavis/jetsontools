@@ -48,9 +48,25 @@ def test_power_readers(tmp_path: Path) -> None:
     ]
 
 
-def test_power_readers_rate_limit(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("rails", "tegrastats_interval", "expected"),
+    [
+        (4, 1000.0, 50.0),
+        (6, 1000.0, 12000 / 188),
+        (4, 100.0, 8000 / 120),
+        (4, 50.0, 200.0),
+        (4, 40.0, 1000.0),
+    ],
+)
+def test_power_readers_rate_limit(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    rails: int,
+    tegrastats_interval: float,
+    expected: float,
+) -> None:
     files: dict[str, object] = {}
-    for channel in range(1, 7):
+    for channel in range(1, rails + 1):
         files.update(
             {
                 f"in{channel}_label": f"RAIL{channel}",
@@ -59,9 +75,11 @@ def test_power_readers_rate_limit(tmp_path: Path) -> None:
             }
         )
     _ina3221(tmp_path, "1-0040", files)
-    readers = _flag_readers("power")
-    assert len(readers) == 12
-    assert {r.interval for r in readers} == {60.0}
+    readers = _flag_readers("power", tegrastats_interval)
+    assert len(readers) == 2 * rails
+    assert [r.interval for r in readers] == pytest.approx([expected] * 2 * rails)
+    reads = 2 * rails * 1000 * (1 / tegrastats_interval + 1 / expected)
+    assert (reads <= 200.0 + 1e-9) == ("once per second" not in caplog.text)
 
 
 def test_sysfs_energy() -> None:

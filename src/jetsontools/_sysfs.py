@@ -116,9 +116,9 @@ def _read(path: str) -> str | None:
     return value
 
 
-def _flag_readers(flag: str) -> list[SysfsReader]:
+def _flag_readers(flag: str, tegrastats_interval: float = 1000.0) -> list[SysfsReader]:
     if flag == "power":
-        return _power_readers()
+        return _power_readers(tegrastats_interval)
     readers: list[SysfsReader] = []
     for pattern in _FLAGS[flag]:
         seen: dict[str, int] = {}
@@ -136,7 +136,7 @@ def _flag_readers(flag: str) -> list[SysfsReader]:
     return readers
 
 
-def _power_readers() -> list[SysfsReader]:
+def _power_readers(tegrastats_interval: float) -> list[SysfsReader]:
     rails: list[tuple[str, Path, Path]] = []
     for hwmon in sorted(Path(_INA3221).glob("*/hwmon/hwmon*")):
         for label_file in sorted(hwmon.glob("in*_label")):
@@ -151,7 +151,16 @@ def _power_readers() -> list[SysfsReader]:
                 and current.is_file()
             ):
                 rails.append((label, voltage, current))
-    interval = max(_POWER_INTERVAL, 2 * len(rails) * 1000 / _I2C_READS_PER_SECOND)
+    reads = 2 * len(rails)
+    tegrastats_reads = reads * 1000 / tegrastats_interval
+    budget = _I2C_READS_PER_SECOND - tegrastats_reads
+    if budget < reads:
+        _log.warning(
+            f"tegrastats at {tegrastats_interval:g} ms reads the INA3221 rails "
+            f"{tegrastats_reads:g} times per second, sampling them once per second"
+        )
+        budget = reads
+    interval = max(_POWER_INTERVAL, reads * 1000 / budget)
     return [
         reader
         for label, voltage, current in rails
