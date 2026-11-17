@@ -11,6 +11,8 @@ Classes
     Runs tegrastats in a separate process and stores output in a file.
 :class:`TegraData`
     Container for tegrastats data with parsing and filtering capabilities.
+:class:`SysfsReader`
+    A sysfs file sampled in the background while TegraStats runs.
 :class:`JetsonInfo`
     Tools for getting information about the Jetson device.
 
@@ -22,6 +24,10 @@ Functions
     Parse the output of parse_tegrastats further to get specfic data.
 :func:`get_powerdraw`
     Parse the output of parse_tegrastats to get all energy information.
+:func:`get_dla_utilization`
+    Parse the output of parse_tegrastats to get DLA utilization.
+:func:`get_dla_active_time`
+    Get the total time each DLA core has been active.
 :func:`filter_data`
     Filter the Tegrastats output by selections of timestamps.
 :func:`set_log_level`
@@ -38,18 +44,28 @@ from ._log import LOG as _LOG
 from ._log import set_log_level
 
 # then we can continue with the rest
+from ._sysfs import SysfsReader, get_dla_active_time
 from ._info import JetsonInfo, get_info
 from ._tegradata import TegraData
 from ._tegrastats import TegraStats
-from ._parsing import parse_tegrastats, get_data, get_powerdraw, filter_data
+from ._parsing import (
+    parse_tegrastats,
+    get_data,
+    get_powerdraw,
+    get_dla_utilization,
+    filter_data,
+)
 
 __all__ = [
     "_LOG",
     "JetsonInfo",
+    "SysfsReader",
     "TegraData",
     "TegraStats",
     "filter_data",
     "get_data",
+    "get_dla_active_time",
+    "get_dla_utilization",
     "get_info",
     "get_powerdraw",
     "parse_tegrastats",

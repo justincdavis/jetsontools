@@ -13,11 +13,19 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from jetsontools._sysfs import (
+    SysfsReader,
+    _flag_readers,
+    _header,
+    _read_now,
+    _resolve,
+    _sample,
+)
 from jetsontools._tegradata import TegraData
 
 if TYPE_CHECKING:
     import io
-    from collections.abc import Generator
+    from collections.abc import Generator, Sequence
     from types import TracebackType
 
     from typing_extensions import Self
@@ -35,6 +43,11 @@ class TegraStats:
         *,
         readall: bool | None = None,
         sudo: bool | None = None,
+        sysfs: Sequence[SysfsReader] | None = None,
+        read_sysfs_dla: bool | None = None,
+        read_sysfs_gpu: bool | None = None,
+        read_sysfs_pva: bool | None = None,
+        read_sysfs_media: bool | None = None,
     ) -> None:
         """
         Create an instance of tegrastats with outputs to a file.
@@ -54,6 +67,40 @@ class TegraStats:
         sudo : bool, optional
             Optionally, run the command with sudo.
             By default, will NOT run with sudo
+        sysfs : Sequence[SysfsReader], optional
+            Optionally, sysfs files to sample in a separate process,
+            see TegraData.sysfs_counters and TegraData.sysfs_gauges.
+            Samples are written to output with the suffix .sysfs,
+            or to a temporary file.
+            By default, will NOT sample sysfs
+        read_sysfs_dla : bool, optional
+            Optionally, sample the time (ms) each DLA core was powered as the
+            counters nvdla0 and nvdla1. A core stays powered about 0.5 to 0.6
+            seconds after its last task, and about 110 ms of each power up is
+            not counted.
+            By default, will NOT sample the DLA cores
+        read_sysfs_gpu : bool, optional
+            Optionally, sample the time (ms) the GPU was powered as the counter
+            gpu. Powered is not busy: the GPU stays powered until it rail gates,
+            about 1.6 seconds after its last work on Orin, even with a CUDA
+            context open.
+            By default, will NOT sample the GPU
+        read_sysfs_pva : bool, optional
+            Optionally, sample the time (ms) each PVA was powered as counters
+            (pva0, ...). Powered is not busy, and may include idle time while
+            an application holds the PVA.
+            By default, will NOT sample the PVA
+        read_sysfs_media : bool, optional
+            Optionally, sample the time (ms) the VIC, NVENC, NVDEC, NVJPG and
+            OFA engines were powered as counters (vic, nvenc, nvdec, nvjpg,
+            nvjpg1, ofa, ...). Each stays powered for its autosuspend delay
+            after its last task.
+            By default, will NOT sample the media engines
+
+        Raises
+        ------
+        ValueError
+            If two sysfs readers have the same name.
 
         """
         # constructor args
@@ -62,6 +109,34 @@ class TegraStats:
         self._readall = readall
         self._sudo = sudo
         self._windows: dict[str, tuple[float, float]] = {}
+
+        readers = list(sysfs or [])
+        flags = {
+            "dla": read_sysfs_dla,
+            "gpu": read_sysfs_gpu,
+            "pva": read_sysfs_pva,
+            "media": read_sysfs_media,
+        }
+        for flag, enabled in flags.items():
+            if enabled:
+                found = _flag_readers(flag)
+                if not found:
+                    _log.warning(f"No sysfs files found for read_sysfs_{flag}")
+                readers.extend(found)
+        names = [reader.name for reader in readers]
+        if len(set(names)) != len(names):
+            err_msg = f"Sysfs reader names must be unique, got: {names}"
+            raise ValueError(err_msg)
+        self._sysfs = _resolve(readers, float(interval))
+        self._sysfs_output: Path | io.TextIOBase | None = None
+        if self._sysfs:
+            if self._output is not None:
+                self._sysfs_output = Path(f"{self._output}.sysfs")
+                self._sysfs_output.write_text(_header(self._sysfs), encoding="utf-8")
+            else:
+                self._sysfs_output = tempfile.TemporaryFile(mode="a+", encoding="utf-8")
+                self._sysfs_output.write(_header(self._sysfs))
+                self._sysfs_output.flush()
 
         # create a tempfile and open in the constructor
         # allows to access the file after the context manager is exited
@@ -79,10 +154,18 @@ class TegraStats:
             kwargs={"readall": self._readall, "sudo": self._sudo},
             daemon=True,
         )
+        self._sysfs_ready: mp.synchronize.Event = self._mp_context.Event()
+        self._sysfs_stop: mp.synchronize.Event = self._mp_context.Event()
+        self._sysfs_process = self._make_sysfs_process()
 
     def __del__(self: Self) -> None:
         with contextlib.suppress(AttributeError):
             self._tempfile.close()
+        with contextlib.suppress(AttributeError):
+            if self._sysfs_output is not None and not isinstance(
+                self._sysfs_output, Path
+            ):
+                self._sysfs_output.close()
 
     def __enter__(self: Self) -> Self:
         self.start()
@@ -114,7 +197,24 @@ class TegraStats:
             # For tempfile, seek to beginning before reading
             self._tempfile.seek(0)
             f = self._tempfile
-        return TegraData(f, windows=dict(self._windows))
+        sysfs = self._sysfs_output
+        if sysfs is not None and not isinstance(sysfs, Path):
+            sysfs.seek(0)
+        return TegraData(f, windows=dict(self._windows), sysfs=sysfs)
+
+    @property
+    def sysfs(self: Self) -> list[SysfsReader]:
+        """
+        The sysfs readers being sampled.
+
+        Returns
+        -------
+        list[SysfsReader]
+            The readers with their resolved path and interval (ms).
+            Readers without a readable file are not included.
+
+        """
+        return list(self._sysfs)
 
     @contextlib.contextmanager
     def window(self: Self, name: str) -> Generator[None, None, None]:
@@ -123,6 +223,10 @@ class TegraStats:
 
         The data collected during the block can then be found with
         TegraData.window. Reusing a name replaces the window.
+        Sysfs counters are read when the block starts and ends,
+        so their change over the window is exact. An engine stays powered
+        for a while after its last task, which is counted in the next window
+        when the gap between the windows is shorter than that.
 
         Parameters
         ----------
@@ -144,10 +248,13 @@ class TegraStats:
 
         """
         start = time.time()
+        self._write_counters(start)
         try:
             yield
         finally:
-            self._windows[name] = (start, time.time())
+            stop = time.time()
+            self._write_counters(stop)
+            self._windows[name] = (start, stop)
 
     def start(self: Self) -> None:
         """Start running Tegrastats."""
@@ -156,6 +263,10 @@ class TegraStats:
 
         # need to wait for Flag
         self._start_flag.wait()
+
+        if self._sysfs_process is not None:
+            self._sysfs_process.start()
+            self._sysfs_ready.wait()
 
     def stop(self: Self) -> None:
         """Stop running Tegrastats."""
@@ -166,6 +277,11 @@ class TegraStats:
             command,
             check=True,
         )
+        if self._sysfs_process is not None:
+            self._sysfs_stop.set()
+            self._sysfs_process.join(timeout=5)
+            if self._sysfs_process.is_alive():
+                self._sysfs_process.terminate()
 
     def reset(self: Self) -> None:
         """Reset the Tegrastats process and data file."""
@@ -176,7 +292,31 @@ class TegraStats:
             kwargs={"readall": self._readall, "sudo": self._sudo},
             daemon=True,
         )
+        self._sysfs_ready.clear()
+        self._sysfs_stop.clear()
+        self._sysfs_process = self._make_sysfs_process()
         self.start()
+
+    def _make_sysfs_process(self: Self) -> mp.process.BaseProcess | None:
+        if self._sysfs_output is None:
+            return None
+        return self._mp_context.Process(
+            target=_sample,
+            args=(self._sysfs, self._sysfs_output, self._sysfs_ready, self._sysfs_stop),
+            daemon=True,
+        )
+
+    def _write_counters(self: Self, timestamp: float) -> None:
+        counters = [reader for reader in self._sysfs if reader.kind == "counter"]
+        if not counters or self._sysfs_output is None:
+            return
+        lines = _read_now(counters, timestamp)
+        if isinstance(self._sysfs_output, Path):
+            with self._sysfs_output.open("a", encoding="utf-8") as f:
+                f.write(lines)
+        else:
+            self._sysfs_output.write(lines)
+            self._sysfs_output.flush()
 
     @staticmethod
     def _run(
