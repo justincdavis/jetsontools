@@ -3,7 +3,7 @@
 # MIT License
 # ruff: noqa: I001
 """
-Package for bounding boxes and their operations.
+Tools for measuring and inspecting NVIDIA Jetson devices.
 
 Classes
 -------
@@ -21,7 +21,7 @@ Functions
 :func:`get_info`
     Get information about the Jetson device.
 :func:`get_data`
-    Parse the output of parse_tegrastats further to get specfic data.
+    Parse the output of parse_tegrastats further to get specific data.
 :func:`get_powerdraw`
     Parse the output of parse_tegrastats to get all energy information.
 :func:`get_dla_utilization`

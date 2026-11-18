@@ -1,23 +1,26 @@
+# Copyright (c) 2024 Justin Davis (davisjustin302@gmail.com)
+#
+# MIT License
 # Configuration file for the Sphinx documentation builder.
 #
-# For the full list of built-in configuration values, see the documentation:
+# This file only contains a selection of the most common options. For a full
+# list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import importlib.metadata
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join("..", "src")))
 
 # -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'jetsontools'
-copyright = '2024, Justin Davis'
-author = 'Justin Davis'
+project = "jetsontools"
+copyright = "2024, Justin Davis"
+author = "Justin Davis"
 version = importlib.metadata.version("jetsontools")
 
 # -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
     "sphinx.ext.duration",
@@ -39,16 +42,12 @@ myst_enable_extensions = [
     "substitution",
 ]
 
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-exclude_patterns = ["**/modules.rst"]
 source_suffix = {
     ".rst": "restructuredtext",
     ".md": "markdown",
 }
 
 intersphinx_mapping = {
-    "rtd": ("https://docs.readthedocs.io/en/stable/", None),
     "python": ("https://docs.python.org/3/", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
 }
@@ -56,7 +55,18 @@ intersphinx_disabled_domains = ["std"]
 
 templates_path = ["_templates"]
 
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
+# This pattern also affects html_static_path and html_extra_path.
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**/modules.rst"]
+
+napoleon_use_ivar = True
+
+autodoc_default_options = {
+    "member-order": "bysource",
+    "show-inheritance": True,
+    "separator": "---",
+}
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -64,24 +74,18 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # a list of builtin themes.
 html_theme = "furo"
 html_theme_options = {
-    # "light_logo": "logo-light.png",
-    # "dark_logo": "logo-dark.png",
     "sidebar_hide_name": False,
-    # "sidebar_structure": "toc",
-    # "toc_title": "Contents",
 }
-html_static_path = ["_static"]  # For additional CSS or custom static files.
+html_static_path = ["_static"]
 
-# Global toctree depth setting
 html_show_sourcelink = False
-html_title = "trtutils"
+html_title = "jetsontools"
 html_copy_source = False
 
-# Custom sidebar templates
 html_sidebars = {
     "**": ["sidebar/scroll-start.html", "sidebar/brand.html", "sidebar/navigation.html", "sidebar/scroll-end.html"],
 }
 
 html_css_files = [
-    "center.cs",  # Make sure this path is correct relative to _static
+    "center.css",
 ]

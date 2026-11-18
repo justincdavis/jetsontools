@@ -30,10 +30,7 @@ clean:
 	rm -rf .ruff_cache
 
 docs:
-	python3 ci/build_example_docs.py
-	rm -rf docs/source/*
-	sphinx-apidoc -o docs/source/ src/jetsontools/
-	cd docs && make html
+	./ci/make_docs.sh
 
 stubs:
 	python3 ci/make_stubs.py

@@ -52,7 +52,7 @@ def _setup_logger(level: str | None = None) -> None:
 
 def set_log_level(level: str) -> None:
     """
-    Set the log level for the trtutils package.
+    Set the log level for the jetsontools package.
 
     Parameters
     ----------
