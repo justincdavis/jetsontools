@@ -10,6 +10,8 @@
 
 ### Fixed
 
+- Parsing of Xavier AGX tegrastats: logs without DATE/TIME, MTS fg/bg as MTS_FG and MTS_BG, rails (GPU, CPU, SOC, CV, VDDRQ, SYS5V) as VDD_GPU, VDD_CPU, VDD_SOC, VDD_CV, VDDRQ and VIN_SYS5V in mW so they no longer overwrite CPU and GPU, included in TegraData.powerdraw
+- TegraData.save_as_csv raises ValueError, not IndexError, when there is no data to save
 - TegraStats on Python 3.14+
 
 ## 0.1.1 (06-18-2025)

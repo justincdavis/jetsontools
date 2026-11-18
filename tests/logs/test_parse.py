@@ -12,12 +12,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from jetsontools import TegraData, parse_tegrastats
-from tests.logs._helpers import (
-    NO_DATE_TIME,
-    RECORDINGS_PER_BOARD,
-    UNSTABLE_KEYS,
-    known_gap,
-)
+from tests.logs._helpers import RECORDINGS_PER_BOARD, XAVIER_AGX
 
 if TYPE_CHECKING:
     from tests.logs._helpers import Recording
@@ -66,12 +61,13 @@ def test_values_are_strings(data: TegraData) -> None:
         assert all(isinstance(value, str) and value for value in entry.values())
 
 
-def test_date_and_time(
-    request: pytest.FixtureRequest, recording: Recording, data: TegraData
-) -> None:
-    """Entries from boards that report them have DATE as MM-DD-YYYY and TIME as HH:MM:SS."""
-    known_gap(request, recording, NO_DATE_TIME)
+def test_date_and_time(recording: Recording, data: TegraData) -> None:
+    """Entries have DATE as MM-DD-YYYY and TIME as HH:MM:SS, except on Xavier AGX."""
     for entry in data.data:
+        if recording.board == XAVIER_AGX:
+            assert "DATE" not in entry
+            assert "TIME" not in entry
+            continue
         month, day, year = entry["DATE"].split("-")
         assert (len(month), len(day), len(year)) == (2, 2, 4)
         hour, minute, second = entry["TIME"].split(":")
@@ -80,11 +76,8 @@ def test_date_and_time(
         assert 0 <= int(second) < 61
 
 
-def test_same_fields_every_sample(
-    request: pytest.FixtureRequest, recording: Recording, data: TegraData
-) -> None:
+def test_same_fields_every_sample(data: TegraData) -> None:
     """Every sample of a recording has the same fields."""
-    known_gap(request, recording, UNSTABLE_KEYS, kind="all")
     assert {tuple(entry) for entry in data.data} == {tuple(data.data[0])}
 
 
