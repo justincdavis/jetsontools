@@ -30,6 +30,9 @@ if TYPE_CHECKING:
 _log = logging.getLogger(__name__)
 
 _DEVICES = "/sys/bus/platform/devices"
+_INA3221 = "/sys/bus/i2c/drivers/ina3221"
+_POWER_INTERVAL = 50.0
+_I2C_READS_PER_SECOND = 200
 _ACTIVE_TIME = "power/runtime_active_time"
 _FLAGS: dict[str, tuple[str, ...]] = {
     "dla": ("*.nvdla[0-9]*",),
@@ -113,7 +116,9 @@ def _read(path: str) -> str | None:
     return value
 
 
-def _flag_readers(flag: str) -> list[SysfsReader]:
+def _flag_readers(flag: str, tegrastats_interval: float = 1000.0) -> list[SysfsReader]:
+    if flag == "power":
+        return _power_readers(tegrastats_interval)
     readers: list[SysfsReader] = []
     for pattern in _FLAGS[flag]:
         seen: dict[str, int] = {}
@@ -129,6 +134,41 @@ def _flag_readers(flag: str) -> list[SysfsReader]:
                 name = f"{base}{count}" if count else base
                 readers.append(SysfsReader(name, str(path), "counter"))
     return readers
+
+
+def _power_readers(tegrastats_interval: float) -> list[SysfsReader]:
+    rails: list[tuple[str, Path, Path]] = []
+    for hwmon in sorted(Path(_INA3221).glob("*/hwmon/hwmon*")):
+        for label_file in sorted(hwmon.glob("in*_label")):
+            channel = label_file.name[len("in") : -len("_label")]
+            label = _read_text(label_file)
+            voltage = hwmon / f"in{channel}_input"
+            current = hwmon / f"curr{channel}_input"
+            if (
+                label
+                and _NAME.fullmatch(label)
+                and voltage.is_file()
+                and current.is_file()
+            ):
+                rails.append((label, voltage, current))
+    reads = 2 * len(rails)
+    tegrastats_reads = reads * 1000 / tegrastats_interval
+    budget = _I2C_READS_PER_SECOND - tegrastats_reads
+    if budget < reads:
+        _log.warning(
+            f"tegrastats at {tegrastats_interval:g} ms reads the INA3221 rails "
+            f"{tegrastats_reads:g} times per second, sampling them once per second"
+        )
+        budget = reads
+    interval = max(_POWER_INTERVAL, reads * 1000 / budget)
+    return [
+        reader
+        for label, voltage, current in rails
+        for reader in (
+            SysfsReader(f"{label}.mV", str(voltage), interval=interval),
+            SysfsReader(f"{label}.mA", str(current), interval=interval),
+        )
+    ]
 
 
 def _probe_intervals(paths: list[str], ceiling: float) -> list[float]:
@@ -320,6 +360,65 @@ def _gauges(
         if values:
             gauges[name] = Metric(raw=values)
     return gauges
+
+
+def _value_at(series: Series, timestamp: float) -> float:
+    times, values = series
+    index = bisect_left(times, timestamp)
+    if index == 0:
+        return values[0]
+    if index == len(times):
+        return values[-1]
+    t0, t1 = times[index - 1], times[index]
+    v0, v1 = values[index - 1], values[index]
+    return v0 + (v1 - v0) * (timestamp - t0) / (t1 - t0)
+
+
+def _integrate(series: Series, start: float, stop: float) -> float:
+    times, values = series
+    start, stop = max(start, times[0]), min(stop, times[-1])
+    if stop <= start:
+        return 0.0
+    inner = range(bisect_right(times, start), bisect_left(times, stop))
+    points = [
+        (start, _value_at(series, start)),
+        *((times[i], values[i]) for i in inner),
+        (stop, _value_at(series, stop)),
+    ]
+    return sum(
+        (t1 - t0) * (v0 + v1) / 2 for (t0, v0), (t1, v1) in zip(points, points[1:])
+    )
+
+
+def _power(voltage: Series, current: Series) -> Series:
+    volt_times, volts = voltage
+    times, amps = current
+    watts = [
+        volts[max(bisect_right(volt_times, t) - 1, 0)] * ma / 1000
+        for t, ma in zip(times, amps)
+    ]
+    return times, watts
+
+
+def _energy(
+    kinds: dict[str, str],
+    series: dict[str, Series],
+    ranges: list[tuple[float, float]] | None,
+) -> dict[str, float]:
+    energy: dict[str, float] = {}
+    for name, kind in kinds.items():
+        rail, _, unit = name.rpartition(".")
+        voltage = f"{rail}.mV"
+        if unit != "mA" or name not in series or voltage not in series:
+            continue
+        if kind != "gauge" or kinds.get(voltage) != "gauge":
+            continue
+        power = _power(series[voltage], series[name])
+        spans = ranges if ranges is not None else [(power[0][0], power[0][-1])]
+        energy[rail] = sum(_integrate(power, start, stop) for start, stop in spans)
+    if energy:
+        energy["TOTAL"] = sum(energy.values())
+    return energy
 
 
 def get_dla_active_time() -> dict[str, int]:

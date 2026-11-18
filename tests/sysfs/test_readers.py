@@ -72,7 +72,7 @@ def test_flag_readers(tmp_path: Path) -> None:
 
 
 def test_no_devices() -> None:
-    for flag in ("dla", "gpu", "pva", "media"):
+    for flag in ("dla", "gpu", "pva", "media", "power"):
         assert _flag_readers(flag) == []
     assert get_dla_active_time() == {}
 

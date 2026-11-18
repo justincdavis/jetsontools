@@ -48,6 +48,7 @@ class TegraStats:
         read_sysfs_gpu: bool | None = None,
         read_sysfs_pva: bool | None = None,
         read_sysfs_media: bool | None = None,
+        read_sysfs_power: bool | None = None,
     ) -> None:
         """
         Create an instance of tegrastats with outputs to a file.
@@ -96,6 +97,15 @@ class TegraStats:
             nvjpg1, ofa, ...). Each stays powered for its autosuspend delay
             after its last task.
             By default, will NOT sample the media engines
+        read_sysfs_power : bool, optional
+            Optionally, sample the voltage (mV) and current (mA) of each INA3221
+            power rail as the gauges <rail>.mV and <rail>.mA, see
+            TegraData.sysfs_energy. Each read is an I2C transfer, and tegrastats
+            reads the same rails every interval, so the rails are sampled every
+            50 ms, or less often so that tegrastats and these readers take at
+            most 200 reads per second together, e.g. every 200 ms with an
+            interval of 50 ms. The limit covers this TegraStats only.
+            By default, will NOT sample the power rails
 
         Raises
         ------
@@ -116,10 +126,11 @@ class TegraStats:
             "gpu": read_sysfs_gpu,
             "pva": read_sysfs_pva,
             "media": read_sysfs_media,
+            "power": read_sysfs_power,
         }
         for flag, enabled in flags.items():
             if enabled:
-                found = _flag_readers(flag)
+                found = _flag_readers(flag, float(interval))
                 if not found:
                     _log.warning(f"No sysfs files found for read_sysfs_{flag}")
                 readers.extend(found)
