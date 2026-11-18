@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Changed
+
+- The version comes from git tags with setuptools-scm, so each commit after a release builds as a distinct dev version; __version__ reads the installed metadata
+
 ### Added
 
 - Python 3.15 support

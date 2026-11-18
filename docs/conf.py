@@ -3,10 +3,10 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import importlib.metadata
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join("..", "src")))
-import jetsontools
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -14,9 +14,7 @@ import jetsontools
 project = 'jetsontools'
 copyright = '2024, Justin Davis'
 author = 'Justin Davis'
-version = '0.1.4'
-
-assert version == jetsontools.__version__
+version = importlib.metadata.version("jetsontools")
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
