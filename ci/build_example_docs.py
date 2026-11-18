@@ -49,8 +49,11 @@ def main():
 
     # create the examples.rst file
     with open(os.path.join("docs", "examples.rst"), "w") as f:
+        f.write(".. _examples:\n\n")
         f.write("Examples\n")
         f.write("========\n\n")
+        f.write("The scripts in the `examples directory <https://github.com/justincdavis/jetsontools/tree/main/examples>`_\n")
+        f.write("run on a Jetson.\n\n")
         f.write(".. toctree::\n")
         f.write("    :maxdepth: 1\n\n")
         for example_file in example_files:

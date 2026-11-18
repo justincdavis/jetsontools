@@ -429,7 +429,7 @@ def get_info(*, verbose: bool | None = None) -> JetsonInfo:
 
     Returns
     -------
-    dict[str, str]
+    JetsonInfo
         The information about the Jetson device.
 
     Raises

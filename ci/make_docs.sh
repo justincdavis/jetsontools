@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Copyright (c) 2026 Justin Davis (davisjustin302@gmail.com)
+#
+# MIT License
+
+set -e
+
+if [ ! -d ".venv-docs" ]; then
+    echo "Creating .venv-docs environment..."
+    uv venv .venv-docs --clear
+    . .venv-docs/bin/activate && \
+    uv pip install -e ".[docs]"
+fi
+
+source .venv-docs/bin/activate
+
+echo "Building documentation..."
+rm -rf docs/_build/*
+.venv-docs/bin/python3 ci/build_example_docs.py
+.venv-docs/bin/sphinx-apidoc -o docs/source/ src/jetsontools/ --separate --force
+cd docs && SPHINXBUILD=../.venv-docs/bin/sphinx-build make html
