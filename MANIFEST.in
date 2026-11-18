@@ -1,1 +1,6 @@
+exclude *
+prune *
+include MANIFEST.in README.md LICENSE pyproject.toml tests/test*.py
+graft src/jetsontools.egg-info
+recursive-include src/jetsontools *.py
 include src/jetsontools/py.typed

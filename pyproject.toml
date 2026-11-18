@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "jetsontools"
-version = "0.1.4"
+dynamic = ["version"]
 authors = [
   {name="Justin Davis", email="davisjustin302@gmail.com"},
 ]
@@ -66,22 +66,11 @@ dev = [
     "jetsontools[docs]",
     "twine>=4.0.0",
     "wheel>=0.37.0",
-    "bumpver>=2023.1126",
     "pyclean>=2.7.0",
 ]
 
-[tool.bumpver]
-current_version = "0.1.4"
-version_pattern = "MAJOR.MINOR.PATCH"
-commit_message  = "Bump version {old_version} -> {new_version}"
-commit          = true
-tag             = true
-push            = false
-
-[tool.bumpver.file_patterns]
-"pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
-"src/jetsontools/__init__.py" = ["{version}"]
-"docs/conf.py" = ["{version}"]
+[tool.setuptools_scm]
+fallback_version = "0.0.0"
 
 [tool.setuptools.packages.find]
 where = ["src"]

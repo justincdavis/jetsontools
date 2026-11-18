@@ -39,6 +39,8 @@ Functions
 
 from __future__ import annotations
 
+import importlib.metadata
+
 # setup the logger first
 from ._log import LOG as _LOG
 from ._log import set_log_level
@@ -71,4 +73,7 @@ __all__ = [
     "parse_tegrastats",
     "set_log_level",
 ]
-__version__ = "0.1.4"
+try:
+    __version__ = importlib.metadata.version("jetsontools")
+except importlib.metadata.PackageNotFoundError:
+    __version__ = "0.0.0"
